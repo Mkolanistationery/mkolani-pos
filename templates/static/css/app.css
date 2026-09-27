@@ -21,7 +21,7 @@ body {
 /* =========================================================
    1. CUSTOM MODERN SCROLLBAR (Scrollbar ya Kisasa)
    ========================================================= */
-/* Kwa Chrome, Edge, Safari & Opera */
+/* Chrome, Edge, Safari & Opera */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -41,7 +41,7 @@ body {
     background: #94a3b8;
 }
 
-/* Kwa Firefox */
+/* Firefox */
 * {
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
@@ -61,6 +61,7 @@ body {
     z-index: 1000;
     display: flex;
     flex-direction: column;
+    transition: transform 0.3s ease;
 }
 
 .sidebar-brand {
@@ -75,7 +76,7 @@ body {
 .sidebar-menu {
     padding: 1rem 0;
     flex-grow: 1;
-    overflow-y: auto; /* Inatumia custom scrollbar pindi ikizidi */
+    overflow-y: auto;
 }
 
 .menu-header {
@@ -125,6 +126,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    transition: margin-left 0.3s ease;
 }
 
 .top-navbar {
@@ -137,7 +139,7 @@ body {
 }
 
 /* =========================================================
-   4. CARDS, TABLES & BADGES (Kama za Beem)
+   4. CARDS, TABLES, FORMS & BADGES
    ========================================================= */
 .card {
     border: 1px solid var(--card-border);
@@ -179,7 +181,20 @@ body {
     border-bottom: 1px solid #f1f5f9;
 }
 
-/* Custom Status Badges */
+/* Form Styling Tweaks */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Status Badges */
 .badge-status-progress {
     background-color: #fff7ed;
     color: #c2410c;
@@ -190,12 +205,37 @@ body {
     font-weight: 600;
 }
 
-.badge-status-approved {
-    background-color: #f0fdf4;
-    color: #15803d;
+.badge-status-approved, .bg-success-subtle {
+    background-color: #f0fdf4 !important;
+    color: #15803d !important;
     border: 1px solid #dcfce7;
     padding: 0.35em 0.8em;
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
+}
+
+.bg-primary-subtle {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border: 1px solid #dbeafe;
+    padding: 0.35em 0.8em;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* =========================================================
+   5. RESPONSIVE DESIGN (Kwa ajili ya Simu na Tablets)
+   ========================================================= */
+@media (max-width: 991.98px) {
+    .app-sidebar {
+        transform: translateX(-100%);
+    }
+    .main-wrapper {
+        margin-left: 0;
+    }
+    .app-sidebar.show {
+        transform: translateX(0);
+    }
 }
