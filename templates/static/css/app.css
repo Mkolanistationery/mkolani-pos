@@ -239,3 +239,23 @@ body {
         transform: translateX(0);
     }
 }
+/* Hakikisha Side Navigation Bar inabaki wazi na kueleweka */
+.app-sidebar {
+    width: 260px !important;
+    height: 100vh !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    background-color: #ffffff !important;
+    border-right: 1px solid #e2e8f0 !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Hakikisha sehemu ya kulia haifichi au kuzuia Sidebar */
+.main-wrapper {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+    min-height: 100vh !important;
+}
