@@ -1,1 +1,71 @@
-{% extends "base.html" %}{% block content %}<div class="row g-4"><div class="col-lg-4"><div class="card panel-card"><div class="card-header"><b>Ongeza Mteja</b></div><div class="card-body"><form method="post"><input class="form-control mb-2" name="name" placeholder="Jina" required><input class="form-control mb-2" name="phone" placeholder="Simu"><input class="form-control mb-2" name="email" placeholder="Email"><input class="form-control mb-2" name="address" placeholder="Address"><textarea class="form-control mb-2" name="notes" placeholder="Notes"></textarea><button class="btn btn-primary w-100">Save</button></form></div></div></div><div class="col-lg-8"><div class="card panel-card"><div class="card-header"><b>Customer CRM</b></div><div class="table-responsive"><table class="table"><thead><tr><th>Customer</th><th>Phone</th><th>Purchases</th><th>Debt</th></tr></thead><tbody>{% for c in customers %}<tr><td>{{c.name}}</td><td>{{c.phone}}</td><td>{{'{:,.0f}'.format(c.purchases)}}</td><td class="{% if c.debt>0 %}text-danger fw-bold{% endif %}">{{'{:,.0f}'.format(c.debt)}}</td></tr>{% endfor %}</tbody></table></div></div></div></div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Wateja | Mkolani POS{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card panel-card">
+            <div class="card-header"><b>Ongeza Mteja Mpya</b></div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-2">
+                        <label class="form-label small">Jina la Mteja</label>
+                        <input class="form-control" name="name" placeholder="Mfano: John Doe" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Namba ya Simu</label>
+                        <input class="form-control" name="phone" placeholder="Mfano: 0712345678">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Barua Pepe</label>
+                        <input class="form-control" name="email" type="email" placeholder="mteja@gmail.com">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Anwani</label>
+                        <input class="form-control" name="address" placeholder="Mfano: Mwanza">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Maelezo Ziada</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                    <button class="btn btn-primary w-100">Hifadhi Mteja</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card panel-card">
+            <div class="card-header"><b>Orodha ya Wateja (CRM)</b></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Jina</th>
+                            <th>Namba ya Simu</th>
+                            <th>Jumla ya Manunuzi</th>
+                            <th>Deni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in customers %}
+                        <tr>
+                            <td class="fw-semibold">{{ c.name }}</td>
+                            <td>{{ c.phone or '-' }}</td>
+                            <td>{{ '{:,.0f}'.format(c.purchases) }}</td>
+                            <td class="{% if c.debt > 0 %}text-danger fw-bold{% endif %}">
+                                {{ '{:,.0f}'.format(c.debt) }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">Hakuna mteja aliyesajiliwa bado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
