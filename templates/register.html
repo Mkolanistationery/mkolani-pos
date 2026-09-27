@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}Register | Mkolani POS{% endblock %}{% block content %}
+<div class="auth-wrap"><div class="auth-card wide"><h2><i class="bi bi-building-add"></i> Fungua Business Account</h2>
+{% if error %}<div class="alert alert-danger">{{error}}</div>{% endif %}
+<form method="post" class="row g-3"><div class="col-md-6"><label>Email</label><input class="form-control" name="email" type="email" required></div>
+<div class="col-md-6"><label>Namba ya simu</label><input class="form-control" name="phone_number" required></div>
+<div class="col-md-6"><label>Business Name</label><input class="form-control" name="business_name" value="Mkolani Enterprise" required></div>
+<div class="col-md-6"><label>Business Type</label><select class="form-select" name="business_type"><option value="retail">Retail</option><option value="services">Services</option><option value="restaurant">Restaurant</option><option value="wholesale">Wholesale</option><option value="other">Other</option></select></div>
+<div class="col-md-6"><label>Password</label><input class="form-control" name="password" type="password" minlength="6" required></div>
+<div class="col-md-6"><label>Confirm Password</label><input class="form-control" name="confirm_password" type="password" minlength="6" required></div>
+<div class="col-md-6"><label>Currency</label><input class="form-control" name="currency" value="TZS"></div>
+<div class="col-12"><button class="btn btn-primary">Create Account</button> <a class="btn btn-light" href="{{url_for('login')}}">Login</a></div></form></div></div>{% endblock %}
