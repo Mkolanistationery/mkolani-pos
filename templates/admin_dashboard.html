@@ -1,152 +1,148 @@
 {% extends "base.html" %}
-{% block title %}Master Control | Mkolani POS{% endblock %}
+
+{% block title %}Master Control Center | Mkolani POS{% endblock %}
 
 {% block content %}
-{% if locked %}
-<div class="auth-wrap">
-    <div class="auth-card text-center">
-        <div class="mb-3 fs-1 text-dark"><i class="bi bi-shield-lock"></i></div>
-        <h3 class="fw-bold mb-3">Master Control</h3>
-        {% if error %}
-            <div class="alert alert-danger p-2 mb-3 small">{{ error }}</div>
-        {% endif %}
-        <form method="post">
-            <input class="form-control mb-3 text-center" name="admin_password" type="password" placeholder="Ingiza Master PIN" required autocomplete="off">
-            <button class="btn btn-dark w-100">Fungua System</button>
-        </form>
-    </div>
-</div>
-{% else %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="fw-bold mb-0">👑 Master Control Center</h2>
-        <p class="text-muted small mb-0">Usimamizi mkuu wa Biashara, Watumiaji, na Taarifa za Mfumo.</p>
-    </div>
-    <form method="post" action="{{ url_for('update_admin_pin') }}" class="d-flex gap-2">
-        <input class="form-control form-control-sm" name="new_pin" placeholder="PIN Mpya" required>
-        <button class="btn btn-outline-dark btn-sm">Badilisha PIN</button>
-    </form>
+<div class="mb-4">
+    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-shield-lock-fill text-warning me-2"></i>Master Control Center</h4>
+    <p class="text-muted small mb-0">Usimamizi mkuu wa Biashara, Watumiaji, na Taarifa za Mfumo.</p>
 </div>
 
-<div class="row g-3">
+<!-- STAT CARDS ROW -->
+<div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="stat-card dark">
-            <div>
-                <span class="small opacity-75">Jumla ya Biashara</span>
-                <h3 class="mb-0 fw-bold">{{ businesses|length }}</h3>
+        <div class="card border-0 shadow-sm p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small font-weight-bold text-uppercase">Jumla ya Biashara</div>
+                    <div class="fs-4 fw-bold text-dark">1</div>
+                </div>
+                <div class="bg-light text-primary rounded-circle p-3">
+                    <i class="bi bi-building fs-4"></i>
+                </div>
             </div>
-            <i class="bi bi-buildings"></i>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card primary">
-            <div>
-                <span class="small opacity-75">Watumiaji Wote</span>
-                <h3 class="mb-0 fw-bold">{{ users|length }}</h3>
+        <div class="card border-0 shadow-sm p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small font-weight-bold text-uppercase">Watumiaji Wote</div>
+                    <div class="fs-4 fw-bold text-dark">1</div>
+                </div>
+                <div class="bg-light text-success rounded-circle p-3">
+                    <i class="bi bi-people fs-4"></i>
+                </div>
             </div>
-            <i class="bi bi-people"></i>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card success">
-            <div>
-                <span class="small opacity-75">SMS Zilizotumwa</span>
-                <h3 class="mb-0 fw-bold">{{ sms.count }}</h3>
+        <div class="card border-0 shadow-sm p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small font-weight-bold text-uppercase">SMS Zilizotumwa</div>
+                    <div class="fs-4 fw-bold text-dark">0</div>
+                </div>
+                <div class="bg-light text-info rounded-circle p-3">
+                    <i class="bi bi-chat-text fs-4"></i>
+                </div>
             </div>
-            <i class="bi bi-chat-dots"></i>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card warning">
-            <div>
-                <span class="small opacity-75">Mapato ya SMS</span>
-                <h3 class="mb-0 fw-bold">{{ '{:,.0f}'.format(sms.revenue) }}</h3>
+        <div class="card border-0 shadow-sm p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small font-weight-bold text-uppercase">Mapato ya SMS</div>
+                    <div class="fs-4 fw-bold text-dark">TZS 0</div>
+                </div>
+                <div class="bg-light text-warning rounded-circle p-3">
+                    <i class="bi bi-wallet2 fs-4"></i>
+                </div>
             </div>
-            <i class="bi bi-phone"></i>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mt-1">
-    <div class="col-lg-4">
-        <div class="card panel-card">
-            <div class="card-header"><b>Ongeza Mtumiaji Mpya</b></div>
-            <div class="card-body">
-                <form method="post" action="{{ url_for('admin_add_user') }}">
-                    <input class="form-control mb-2" name="email" type="email" placeholder="Barua pepe" required>
-                    <input class="form-control mb-2" name="phone_number" placeholder="Namba ya simu" required>
-                    <input class="form-control mb-2" name="password" type="password" placeholder="Nenosiri" required>
-                    <select class="form-select mb-2" name="business_id">
-                        {% for b in businesses %}
-                            <option value="{{ b.id }}">{{ b.name }}</option>
-                        {% endfor %}
+<!-- ADD USER FORM CARD -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-person-plus-fill me-2 text-primary"></i>Ongeza Mtumiaji Mpya</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_add_user') }}">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-3">
+                    <input type="text" name="username" class="form-control form-control-sm" placeholder="Jina la Mtumiaji / Email" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="password" name="password" class="form-control form-control-sm" placeholder="Neno la Siri" required>
+                </div>
+                <div class="col-md-3">
+                    <select name="business_name" class="form-select form-select-sm" required>
+                        <option value="Mkolani Enterprise">Mkolani Enterprise</option>
                     </select>
-                    <select class="form-select mb-3" name="role">
+                </div>
+                <div class="col-md-2">
+                    <select name="role" class="form-select form-select-sm" required>
                         <option value="staff">Staff</option>
                         <option value="manager">Manager</option>
                         <option value="admin">Admin</option>
                     </select>
-                    <button class="btn btn-primary w-100">Sajili Mtumiaji</button>
-                </form>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-plus-lg"></i></button>
+                </div>
             </div>
-        </div>
-    </div>
-
-    <div class="col-lg-8">
-        <div class="card panel-card">
-            <div class="card-header"><b>Usimamizi wa Watumiaji</b></div>
-            <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead>
-                        <tr>
-                            <th>Mtumiaji</th>
-                            <th>Biashara</th>
-                            <th>Role</th>
-                            <th>Hali</th>
-                            <th>Kitendo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for x in users %}
-                        <tr>
-                            <td>{{ x.email }}</td>
-                            <td>{{ x.business }}</td>
-                            <td>
-                                <form method="post" action="{{ url_for('admin_role', user_id=x.id) }}" class="d-flex gap-1">
-                                    <select name="role" class="form-select form-select-sm">
-                                        <option value="staff" {% if x.role=='staff' %}selected{% endif %}>staff</option>
-                                        <option value="manager" {% if x.role=='manager' %}selected{% endif %}>manager</option>
-                                        <option value="admin" {% if x.role=='admin' %}selected{% endif %}>admin</option>
-                                    </select>
-                                    <button class="btn btn-sm btn-dark"><i class="bi bi-check"></i></button>
-                                </form>
-                            </td>
-                            <td>
-                                <span class="badge {% if x.is_active %}bg-success{% else %}bg-danger{% endif %}">
-                                    {{ 'ACTIVE' if x.is_active else 'OFF' }}
-                                </span>
-                            </td>
-                            <td>
-                                <form method="post" action="{{ url_for('admin_toggle_user', user_id=x.id) }}">
-                                    <button class="btn btn-sm {% if x.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
-                                        {{ 'Disable' if x.is_active else 'Enable' }}
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </form>
     </div>
 </div>
 
-<div class="card panel-card mt-4">
-    <div class="card-header"><b>Live Audit Log Feed</b></div>
+<!-- USER MANAGEMENT TABLE -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Usimamizi wa Watumiaji</h6>
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Mtumiaji</th>
+                    <th>Biashara</th>
+                    <th>Role</th>
+                    <th>Hali</th>
+                    <th>Kitendo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="fw-bold">anklelulu70@gmail.com</td>
+                    <td>Mkolani Enterprise</td>
+                    <td>
+                        <select class="form-select form-select-sm style-select" style="max-width: 130px;">
+                            <option value="staff">staff</option>
+                            <option value="manager">manager</option>
+                            <option value="admin" selected>admin</option>
+                        </select>
+                    </td>
+                    <td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">ACTIVE</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- AUDIT LOG FEED -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="m-0 fw-bold text-dark"><i class="bi bi-activity me-2 text-primary"></i>Live Audit Log Feed</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
                 <tr>
                     <th>Tarehe</th>
                     <th>Mtumiaji</th>
@@ -156,18 +152,15 @@
                 </tr>
             </thead>
             <tbody>
-                {% for a in feed %}
                 <tr>
-                    <td class="small text-muted">{{ a.created_at }}</td>
-                    <td>{{ a.email }}</td>
-                    <td><span class="badge bg-secondary">{{ a.action }}</span></td>
-                    <td>{{ a.entity }} #{{ a.entity_id or '' }}</td>
-                    <td class="small">{{ a.details }}</td>
+                    <td class="text-muted small">2026-09-27 16:05:08</td>
+                    <td class="fw-semibold">anklelulu70@gmail.com</td>
+                    <td><span class="badge bg-primary-subtle text-primary">login</span></td>
+                    <td>user #1</td>
+                    <td class="small text-muted">Uingiaji umefanikiwa</td>
                 </tr>
-                {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-{% endif %}
 {% endblock %}
