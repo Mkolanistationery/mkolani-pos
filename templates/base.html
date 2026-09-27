@@ -13,6 +13,28 @@
 
     <!-- 3. Faili lako la app.css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="bi bi-shop me-2"></i>MKOLANI POS</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales') }}"><i class="bi bi-cart-check"></i> Mauzo (POS)</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('sms_center') }}"><i class="bi bi-chat-dots"></i> SMS Center</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('customers') }}"><i class="bi bi-people"></i> Wateja</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('products') }}"><i class="bi bi-box-seam"></i> Stoko</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('reports') }}"><i class="bi bi-bar-chart"></i> Ripoti</a></li>
+      </ul>
+      <div class="d-flex align-items-center gap-3 text-white">
+        <span class="badge bg-primary"><i class="bi bi-chat-text"></i> SMS: 108</span>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
+</nav>
 </head>
 <body>
     {% if current_user %}
