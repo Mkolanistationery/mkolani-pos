@@ -5,103 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Mkolani POS{% endblock %}</title>
 
-    <!-- 1. Bootstrap CSS -->
+    <!-- Google Fonts & Bootstrap -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     
-    <!-- 2. Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-    <!-- 3. Faili lako la app.css -->
+    <!-- CSS Yako -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-  <div class="container-fluid">
-    <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="bi bi-shop me-2"></i>MKOLANI POS</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link active" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('sales') }}"><i class="bi bi-cart-check"></i> Mauzo (POS)</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('sms_center') }}"><i class="bi bi-chat-dots"></i> SMS Center</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('customers') }}"><i class="bi bi-people"></i> Wateja</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('products') }}"><i class="bi bi-box-seam"></i> Stoko</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('reports') }}"><i class="bi bi-bar-chart"></i> Ripoti</a></li>
-      </ul>
-      <div class="d-flex align-items-center gap-3 text-white">
-        <span class="badge bg-primary"><i class="bi bi-chat-text"></i> SMS: 108</span>
-        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-right"></i></a>
-      </div>
-    </div>
-  </div>
-</nav>
 </head>
 <body>
-    {% if current_user %}
-    <!-- Sidebar Navigation -->
+
+    {% if current_user.is_authenticated %}
+    <!-- SIDEBAR LEFT -->
     <aside class="app-sidebar">
-        <div class="sidebar-brand d-flex align-items-center justify-content-between">
-            <span><i class="bi bi-grid-1x2-fill text-primary me-2"></i>MKOLANI POS</span>
+        <div class="sidebar-brand">
+            <i class="bi bi-box-seam-fill text-primary me-2"></i>MKOLANI POS
         </div>
         
         <div class="sidebar-menu">
             <div class="menu-header">KUU</div>
-            <a href="{{ url_for('index') }}" class="sidebar-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
-            <a href="{{ url_for('sales') }}" class="sidebar-link"><i class="bi bi-cart-check"></i> Mauzo (POS)</a>
+            <a href="{{ url_for('index') }}" class="sidebar-link">
+                <i class="bi bi-grid-1x2"></i> <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('sales') }}" class="sidebar-link">
+                <i class="bi bi-cart3"></i> <span>Mauzo (POS)</span>
+            </a>
 
             <div class="menu-header">CAMPAIGNS & CRM</div>
-            <a href="{{ url_for('sms_center') }}" class="sidebar-link"><i class="bi bi-chat-dots"></i> SMS Center</a>
-            <a href="{{ url_for('customers') }}" class="sidebar-link"><i class="bi bi-people"></i> Wateja (CRM)</a>
-            <a href="{{ url_for('debts') }}" class="sidebar-link"><i class="bi bi-wallet2"></i> Madeni</a>
+            <a href="{{ url_for('sms_center') }}" class="sidebar-link">
+                <i class="bi bi-chat-left-text"></i> <span>SMS Center</span>
+            </a>
+            <a href="{{ url_for('customers') }}" class="sidebar-link">
+                <i class="bi bi-people"></i> <span>Wateja (CRM)</span>
+            </a>
+            <a href="{{ url_for('debts') }}" class="sidebar-link">
+                <i class="bi bi-wallet2"></i> <span>Madeni</span>
+            </a>
 
             <div class="menu-header">INVENTORY & EXPENSES</div>
-            <a href="{{ url_for('products') }}" class="sidebar-link"><i class="bi bi-box-seam"></i> Stoko & Bidhaa</a>
-            <a href="{{ url_for('expenses') }}" class="sidebar-link"><i class="bi bi-receipt"></i> Matumizi</a>
-            <a href="{{ url_for('reports') }}" class="sidebar-link"><i class="bi bi-bar-chart"></i> Ripoti</a>
+            <a href="{{ url_for('products') }}" class="sidebar-link">
+                <i class="bi bi-boxes"></i> <span>Stoko & Bidhaa</span>
+            </a>
+            <a href="{{ url_for('expenses') }}" class="sidebar-link">
+                <i class="bi bi-receipt-cutoff"></i> <span>Matumizi</span>
+            </a>
+            <a href="{{ url_for('reports') }}" class="sidebar-link">
+                <i class="bi bi-graph-up-arrow"></i> <span>Ripoti</span>
+            </a>
 
             {% if current_user.role == 'master' %}
             <div class="menu-header">ADMINISTRATION</div>
-            <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link text-warning"><i class="bi bi-shield-lock"></i> Master Panel</a>
+            <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link text-warning">
+                <i class="bi bi-shield-lock-fill"></i> <span>Master Panel</span>
+            </a>
             {% endif %}
         </div>
 
-        <!-- User Profile Footer -->
         <div class="p-3 border-top">
-            <div class="d-flex align-items-center">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:35px; height:35px; font-weight:bold;">
-                    {{ current_user.email[0]|upper }}
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center overflow-hidden">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:34px; height:34px; font-weight:bold;">
+                        {{ current_user.email[0]|upper }}
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="fw-bold text-truncate small" style="max-width: 130px;">{{ current_user.business_name }}</div>
+                        <div class="text-muted small text-truncate" style="font-size: 0.7rem; max-width: 130px;">{{ current_user.email }}</div>
+                    </div>
                 </div>
-                <div class="overflow-hidden me-auto">
-                    <div class="small fw-bold text-truncate">{{ current_user.business_name }}</div>
-                    <div class="text-muted small text-truncate" style="font-size:0.75rem;">{{ current_user.email }}</div>
-                </div>
-                <a href="{{ url_for('logout') }}" class="text-danger ms-2"><i class="bi bi-box-arrow-right"></i></a>
+                <a href="{{ url_for('logout') }}" class="text-danger ms-2" title="Log out"><i class="bi bi-box-arrow-right fs-5"></i></a>
             </div>
         </div>
     </aside>
-    {% endif %}
 
-    <!-- Main Content Area -->
-    <div class="{% if current_user %}main-wrapper{% endif %}">
-        {% if current_user %}
+    <!-- MAIN CONTENT RIGHT -->
+    <div class="main-wrapper">
         <header class="top-navbar d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3">
-                <span class="badge bg-light text-dark border"><i class="bi bi-building me-1"></i> {{ current_user.business_type|upper }}</span>
+            <div>
+                <span class="badge bg-light text-dark border px-3 py-2 fw-semibold">
+                    <i class="bi bi-shop me-1 text-primary"></i> {{ current_user.business_type|upper if current_user.business_type else 'RETAIL' }}
+                </span>
             </div>
             <div class="d-flex align-items-center gap-3">
-                <div class="balance-card py-1 px-3 d-flex align-items-center gap-2">
-                    <i class="bi bi-chat-text text-warning"></i>
+                <div class="balance-card d-flex align-items-center gap-2">
+                    <i class="bi bi-chat-left-dots text-warning"></i>
                     <span class="small">SMS Balance: <strong>108</strong></span>
                 </div>
-                <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-gear"></i> Mipangilio</a>
+                <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-gear me-1"></i> Mipangilio
+                </a>
             </div>
         </header>
-        {% endif %}
 
         <main class="p-4">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -111,6 +109,12 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+
+    {% else %}
+    <main>
+        {% block auth_content %}{% endblock %}
+    </main>
+    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}
