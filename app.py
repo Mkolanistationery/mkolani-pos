@@ -1,29 +1,52 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+# ============================================================
+# MKOLANI POS - COMPLETE STABLE VERSION
+# Flask + SQLite
+# Render / Gunicorn Ready
+# ============================================================
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    flash,
+    jsonify
+)
+
 import sqlite3
 import os
 import requests
 import threading
 import random
+import secrets
 from datetime import datetime, timedelta
 from functools import wraps
+
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 # ============================================================
-# MKOLANI POS - ADVANCED CORE
-# Core + Auth + Master + POS + CRM
-# Stock + Debts + Expenses + SMS + Reports + Security
+# APP CONFIGURATION
 # ============================================================
 
 app = Flask(__name__)
 
 app.secret_key = os.environ.get(
     "SECRET_KEY",
-    "CHANGE_THIS_SECRET_KEY_ON_RENDER"
+    "mkolani-pos-change-this-secret-key"
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 DB_PATH = os.path.join(BASE_DIR, "pos.db")
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+
+UPLOAD_FOLDER = os.path.join(
+    BASE_DIR,
+    "static",
+    "uploads"
+)
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -33,195 +56,158 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ============================================================
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn = sqlite3.connect(
+        DB_PATH,
+        timeout=30,
+        check_same_thread=False
+    )
+
     conn.row_factory = sqlite3.Row
+
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA busy_timeout = 5000")
+    conn.execute("PRAGMA busy_timeout = 30000")
+    conn.execute("PRAGMA journal_mode = WAL")
+
     return conn
 
 
-def column_exists(conn, table, column):
-    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
-    return any(row["name"] == column for row in rows)
+def column_exists(conn, table_name, column_name):
+    try:
+        columns = conn.execute(
+            f"PRAGMA table_info({table_name})"
+        ).fetchall()
+
+        return any(
+            row["name"] == column_name
+            for row in columns
+        )
+
+    except Exception:
+        return False
 
 
-def add_column(conn, table, column, definition):
-    if not column_exists(conn, table, column):
+def add_column_if_missing(
+    conn,
+    table_name,
+    column_name,
+    column_definition
+):
+    if not column_exists(
+        conn,
+        table_name,
+        column_name
+    ):
         try:
             conn.execute(
-                f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+                f"""
+                ALTER TABLE {table_name}
+                ADD COLUMN {column_name}
+                {column_definition}
+                """
             )
-        except sqlite3.OperationalError as exc:
-            print(
-                f"DATABASE MIGRATION WARNING: "
-                f"{table}.{column}: {exc}"
-            )
+        except Exception:
+            pass
 
 
 def init_db():
+
     conn = get_db()
-    cur = conn.cursor()
 
-    # --------------------------------------------------------
+    # ========================================================
     # USERS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
+            name TEXT,
+            email TEXT UNIQUE,
             password TEXT NOT NULL,
-            phone_number TEXT,
-            business_name TEXT DEFAULT 'Mkolani Enterprise',
-            business_type TEXT DEFAULT 'RETAIL',
-            currency TEXT DEFAULT 'TZS',
-            is_admin INTEGER DEFAULT 0,
             role TEXT DEFAULT 'Staff',
-            status TEXT DEFAULT 'active',
-            logo_path TEXT,
-            beem_api_key TEXT,
-            beem_secret_key TEXT,
-            beem_sender_id TEXT,
-            reset_otp TEXT,
-            reset_otp_expires TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            last_login TEXT
-        )
-    """)
-
-    for column, definition in [
-        ("phone_number", "TEXT"),
-        ("business_name", "TEXT"),
-        ("business_type", "TEXT"),
-        ("currency", "TEXT"),
-        ("is_admin", "INTEGER DEFAULT 0"),
-        ("role", "TEXT DEFAULT 'Staff'"),
-        ("status", "TEXT DEFAULT 'active'"),
-        ("logo_path", "TEXT"),
-        ("beem_api_key", "TEXT"),
-        ("beem_secret_key", "TEXT"),
-        ("beem_sender_id", "TEXT"),
-        ("reset_otp", "TEXT"),
-        ("reset_otp_expires", "TEXT"),
-        ("created_at", "TEXT"),
-        ("last_login", "TEXT"),
-        ("phone", "TEXT"),
-        ("sector", "TEXT"),
-        ("api_key", "TEXT"),
-        ("secret_key", "TEXT"),
-        ("sender_id", "TEXT"),
-        ("logo_url", "TEXT"),
-    ]:
-        add_column(conn, "users", column, definition)
-
-    # --------------------------------------------------------
-    # SYSTEM SETTINGS
-    # --------------------------------------------------------
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS system_settings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            setting_key TEXT UNIQUE NOT NULL,
-            setting_value TEXT
-        )
-    """)
-
-    defaults = {
-        "admin_pin": "1234",
-        "app_name": "Mkolani POS",
-        "app_logo": "",
-        "company_name": "Mkolani Enterprise",
-        "currency": "TZS",
-        "sms_enabled": "1",
-    }
-
-    for key, value in defaults.items():
-        cur.execute("""
-            INSERT OR IGNORE INTO system_settings
-            (setting_key, setting_value)
-            VALUES (?, ?)
-        """, (key, value))
-
-    # --------------------------------------------------------
-    # RECEIPTS
-    # --------------------------------------------------------
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS receipts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            customer_name TEXT,
-            service_item TEXT,
-            quantity REAL DEFAULT 1,
-            unit_price REAL DEFAULT 0,
-            amount REAL DEFAULT 0,
-            discount REAL DEFAULT 0,
-            debt REAL DEFAULT 0,
+            is_admin INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1,
+            business_name TEXT DEFAULT 'Mkolani Stationery',
             phone TEXT,
-            payment_method TEXT DEFAULT 'Cash',
-            cash_received REAL DEFAULT 0,
-            change_given REAL DEFAULT 0,
-            cost REAL DEFAULT 0,
-            profit REAL DEFAULT 0,
-            receipt_number TEXT,
+            master_pin TEXT,
+            reset_token TEXT,
+            reset_expires TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
-    for column, definition in [
-        ("quantity", "REAL DEFAULT 1"),
-        ("unit_price", "REAL DEFAULT 0"),
-        ("discount", "REAL DEFAULT 0"),
-        ("payment_method", "TEXT DEFAULT 'Cash'"),
-        ("cash_received", "REAL DEFAULT 0"),
-        ("change_given", "REAL DEFAULT 0"),
-        ("cost", "REAL DEFAULT 0"),
-        ("profit", "REAL DEFAULT 0"),
-        ("receipt_number", "TEXT"),
-    ]:
-        add_column(conn, "receipts", column, definition)
+    # ========================================================
+    # SYSTEM SETTINGS
+    # ========================================================
 
-    # --------------------------------------------------------
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS system_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            setting_key TEXT UNIQUE,
+            setting_value TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # ========================================================
+    # RECEIPTS
+    # ========================================================
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS receipts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            receipt_no TEXT UNIQUE,
+            customer_name TEXT,
+            customer_phone TEXT,
+            items TEXT,
+            amount REAL DEFAULT 0,
+            discount REAL DEFAULT 0,
+            paid REAL DEFAULT 0,
+            debt REAL DEFAULT 0,
+            cash_received REAL DEFAULT 0,
+            change_amount REAL DEFAULT 0,
+            cost REAL DEFAULT 0,
+            profit REAL DEFAULT 0,
+            payment_method TEXT DEFAULT 'Cash',
+            notes TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL
+        )
+    """)
+
+    # ========================================================
     # PRODUCTS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             name TEXT NOT NULL,
             sku TEXT,
             category TEXT,
-            supplier TEXT,
+            unit TEXT DEFAULT 'pcs',
             buying_price REAL DEFAULT 0,
             selling_price REAL DEFAULT 0,
             quantity REAL DEFAULT 0,
-            minimum_stock REAL DEFAULT 0,
-            unit TEXT DEFAULT 'pcs',
-            status TEXT DEFAULT 'active',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            min_stock REAL DEFAULT 5,
+            supplier TEXT,
+            description TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL
         )
     """)
 
-    for column, definition in [
-        ("sku", "TEXT"),
-        ("category", "TEXT"),
-        ("supplier", "TEXT"),
-        ("buying_price", "REAL DEFAULT 0"),
-        ("selling_price", "REAL DEFAULT 0"),
-        ("quantity", "REAL DEFAULT 0"),
-        ("minimum_stock", "REAL DEFAULT 0"),
-        ("unit", "TEXT DEFAULT 'pcs'"),
-        ("status", "TEXT DEFAULT 'active'"),
-        ("created_at", "TEXT"),
-    ]:
-        add_column(conn, "products", column, definition)
-
-    # --------------------------------------------------------
+    # ========================================================
     # CUSTOMERS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS customers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
@@ -230,36 +216,46 @@ def init_db():
             email TEXT,
             address TEXT,
             notes TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL
         )
     """)
 
-    # --------------------------------------------------------
+    # ========================================================
     # DEBTS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS debts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             customer_id INTEGER,
             customer_name TEXT,
-            phone TEXT,
-            reference TEXT,
+            customer_phone TEXT,
+            receipt_id INTEGER,
             amount REAL DEFAULT 0,
             paid REAL DEFAULT 0,
             balance REAL DEFAULT 0,
-            status TEXT DEFAULT 'unpaid',
+            status TEXT DEFAULT 'Pending',
             due_date TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            notes TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL,
+            FOREIGN KEY(customer_id)
+                REFERENCES customers(id)
+                ON DELETE SET NULL
         )
     """)
 
-    # --------------------------------------------------------
+    # ========================================================
     # DEBT PAYMENTS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS debt_payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             debt_id INTEGER,
@@ -267,105 +263,235 @@ def init_db():
             amount REAL DEFAULT 0,
             payment_method TEXT DEFAULT 'Cash',
             notes TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(debt_id)
+                REFERENCES debts(id)
+                ON DELETE CASCADE,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL
         )
     """)
 
-    # --------------------------------------------------------
+    # ========================================================
     # EXPENSES
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             title TEXT NOT NULL,
             category TEXT,
             amount REAL DEFAULT 0,
-            payment_method TEXT DEFAULT 'Cash',
-            notes TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            description TEXT,
+            expense_date TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL
         )
     """)
 
-    # --------------------------------------------------------
+    # ========================================================
     # SMS LOGS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS sms_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            recipient TEXT,
+            phone TEXT,
             message TEXT,
-            sender_id TEXT,
-            status TEXT DEFAULT 'pending',
+            status TEXT,
             response TEXT,
-            cost REAL DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL
         )
     """)
 
-    # --------------------------------------------------------
+    # ========================================================
     # AUDIT LOGS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             action TEXT,
-            description TEXT,
+            details TEXT,
             ip_address TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE SET NULL
         )
     """)
 
-    # --------------------------------------------------------
+    # ========================================================
     # NOTIFICATIONS
-    # --------------------------------------------------------
+    # ========================================================
 
-    cur.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             title TEXT,
             message TEXT,
-            type TEXT DEFAULT 'info',
+            notification_type TEXT DEFAULT 'info',
             is_read INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id)
+                REFERENCES users(id)
+                ON DELETE CASCADE
         )
     """)
 
-    # --------------------------------------------------------
-    # MAKE FIRST USER MASTER
-    # --------------------------------------------------------
+    # ========================================================
+    # BACKWARD COMPATIBILITY / MIGRATIONS
+    # ========================================================
 
-    first_user = cur.execute("""
+    user_columns = {
+        "name": "TEXT",
+        "role": "TEXT DEFAULT 'Staff'",
+        "is_admin": "INTEGER DEFAULT 0",
+        "is_active": "INTEGER DEFAULT 1",
+        "business_name": "TEXT DEFAULT 'Mkolani Stationery'",
+        "phone": "TEXT",
+        "master_pin": "TEXT",
+        "reset_token": "TEXT",
+        "reset_expires": "TEXT",
+        "created_at": "TEXT"
+    }
+
+    for col, definition in user_columns.items():
+        add_column_if_missing(
+            conn,
+            "users",
+            col,
+            definition
+        )
+
+    product_columns = {
+        "user_id": "INTEGER",
+        "sku": "TEXT",
+        "category": "TEXT",
+        "unit": "TEXT DEFAULT 'pcs'",
+        "buying_price": "REAL DEFAULT 0",
+        "selling_price": "REAL DEFAULT 0",
+        "quantity": "REAL DEFAULT 0",
+        "min_stock": "REAL DEFAULT 5",
+        "supplier": "TEXT",
+        "description": "TEXT",
+        "created_at": "TEXT",
+        "updated_at": "TEXT"
+    }
+
+    for col, definition in product_columns.items():
+        add_column_if_missing(
+            conn,
+            "products",
+            col,
+            definition
+        )
+
+    receipt_columns = {
+        "user_id": "INTEGER",
+        "receipt_no": "TEXT",
+        "customer_name": "TEXT",
+        "customer_phone": "TEXT",
+        "items": "TEXT",
+        "amount": "REAL DEFAULT 0",
+        "discount": "REAL DEFAULT 0",
+        "paid": "REAL DEFAULT 0",
+        "debt": "REAL DEFAULT 0",
+        "cash_received": "REAL DEFAULT 0",
+        "change_amount": "REAL DEFAULT 0",
+        "cost": "REAL DEFAULT 0",
+        "profit": "REAL DEFAULT 0",
+        "payment_method": "TEXT DEFAULT 'Cash'",
+        "notes": "TEXT",
+        "created_at": "TEXT"
+    }
+
+    for col, definition in receipt_columns.items():
+        add_column_if_missing(
+            conn,
+            "receipts",
+            col,
+            definition
+        )
+
+    conn.commit()
+
+    # ========================================================
+    # DEFAULT SETTINGS
+    # ========================================================
+
+    default_settings = {
+        "app_name": "Mkolani POS",
+        "business_name": "Mkolani Stationery",
+        "currency": "TZS",
+        "low_stock_limit": "5",
+        "sms_enabled": "0",
+        "beem_api_key": "",
+        "beem_secret": "",
+        "beem_sender": "Mkolani"
+    }
+
+    for key, value in default_settings.items():
+
+        existing = conn.execute(
+            """
+            SELECT id
+            FROM system_settings
+            WHERE setting_key = ?
+            """,
+            (key,)
+        ).fetchone()
+
+        if not existing:
+            conn.execute(
+                """
+                INSERT INTO system_settings
+                (setting_key, setting_value)
+                VALUES (?, ?)
+                """,
+                (key, value)
+            )
+
+    # ========================================================
+    # MAKE FIRST USER MASTER
+    # ========================================================
+
+    first_user = conn.execute(
+        """
         SELECT id
         FROM users
         ORDER BY id ASC
         LIMIT 1
-    """).fetchone()
+        """
+    ).fetchone()
 
     if first_user:
-        cur.execute("""
+
+        conn.execute(
+            """
             UPDATE users
-            SET role='Master',
-                is_admin=1
-            WHERE id=?
-              AND (
-                    role IS NULL
-                    OR role=''
-                    OR role='Staff'
-                    OR is_admin=1
-              )
-        """, (first_user["id"],))
+            SET role = 'Master',
+                is_admin = 1
+            WHERE id = ?
+            """,
+            (first_user["id"],)
+        )
 
     conn.commit()
     conn.close()
 
 
+# Initialize DB immediately
 init_db()
 
 
@@ -373,11 +499,7 @@ init_db()
 # HELPERS
 # ============================================================
 
-def current_user():
-    """
-    Returns the logged-in user as sqlite3.Row.
-    Returns None if there is no valid session.
-    """
+def get_current_user():
 
     user_id = session.get("user_id")
 
@@ -386,82 +508,159 @@ def current_user():
 
     conn = get_db()
 
-    try:
-        user = conn.execute(
-            "SELECT * FROM users WHERE id=?",
-            (user_id,)
-        ).fetchone()
-    finally:
-        conn.close()
+    user = conn.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE id = ?
+        """,
+        (user_id,)
+    ).fetchone()
+
+    conn.close()
+
+    if not user:
+        session.clear()
+        return None
 
     return user
 
 
-def get_setting(key, default=""):
-    conn = get_db()
+def money(value):
 
     try:
-        row = conn.execute(
-            """
-            SELECT setting_value
-            FROM system_settings
-            WHERE setting_key=?
-            """,
-            (key,)
-        ).fetchone()
-    finally:
-        conn.close()
+        value = float(value or 0)
+    except Exception:
+        value = 0
 
-    return row["setting_value"] if row else default
+    return f"{value:,.0f}"
+
+
+def get_setting(key, default=""):
+
+    conn = get_db()
+
+    row = conn.execute(
+        """
+        SELECT setting_value
+        FROM system_settings
+        WHERE setting_key = ?
+        """,
+        (key,)
+    ).fetchone()
+
+    conn.close()
+
+    if row and row["setting_value"] is not None:
+        return row["setting_value"]
+
+    return default
 
 
 def set_setting(key, value):
+
     conn = get_db()
 
-    try:
-        conn.execute("""
-            INSERT INTO system_settings
-            (setting_key, setting_value)
-            VALUES (?, ?)
-            ON CONFLICT(setting_key)
-            DO UPDATE SET setting_value=excluded.setting_value
-        """, (key, value))
+    conn.execute(
+        """
+        INSERT INTO system_settings
+        (setting_key, setting_value, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(setting_key)
+        DO UPDATE SET
+            setting_value = excluded.setting_value,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (key, str(value))
+    )
 
-        conn.commit()
-    finally:
-        conn.close()
+    conn.commit()
+    conn.close()
 
 
-def log_action(action, description=""):
-    try:
-        user_id = session.get("user_id")
+def normalize_phone(phone):
 
-        ip = request.headers.get(
-            "X-Forwarded-For",
-            request.remote_addr
+    if not phone:
+        return ""
+
+    phone = str(phone).strip()
+
+    phone = phone.replace(
+        " ",
+        ""
+    )
+
+    phone = phone.replace(
+        "-",
+        ""
+    )
+
+    if phone.startswith("+255"):
+        return phone
+
+    if phone.startswith("255"):
+        return "+" + phone
+
+    if phone.startswith("0"):
+        return "+255" + phone[1:]
+
+    return phone
+
+
+def make_receipt_number():
+
+    prefix = "MK"
+
+    date_part = datetime.now().strftime(
+        "%Y%m%d"
+    )
+
+    random_part = str(
+        random.randint(
+            1000,
+            9999
         )
+    )
 
-        if ip and "," in ip:
-            ip = ip.split(",")[0].strip()
+    return f"{prefix}-{date_part}-{random_part}"
+
+
+def log_action(
+    user_id,
+    action,
+    details=""
+):
+
+    try:
 
         conn = get_db()
 
-        conn.execute("""
+        ip = request.remote_addr
+
+        conn.execute(
+            """
             INSERT INTO audit_logs
-            (user_id, action, description, ip_address)
+            (
+                user_id,
+                action,
+                details,
+                ip_address
+            )
             VALUES (?, ?, ?, ?)
-        """, (
-            user_id,
-            action,
-            description,
-            ip
-        ))
+            """,
+            (
+                user_id,
+                action,
+                details,
+                ip
+            )
+        )
 
         conn.commit()
         conn.close()
 
-    except Exception as exc:
-        print("AUDIT ERROR:", exc)
+    except Exception:
+        pass
 
 
 def add_notification(
@@ -470,65 +669,299 @@ def add_notification(
     message,
     notification_type="info"
 ):
+
     try:
+
         conn = get_db()
 
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO notifications
-            (user_id, title, message, type)
+            (
+                user_id,
+                title,
+                message,
+                notification_type
+            )
             VALUES (?, ?, ?, ?)
-        """, (
-            user_id,
-            title,
-            message,
-            notification_type
-        ))
+            """,
+            (
+                user_id,
+                title,
+                message,
+                notification_type
+            )
+        )
 
         conn.commit()
         conn.close()
 
-    except Exception as exc:
-        print("NOTIFICATION ERROR:", exc)
+    except Exception:
+        pass
 
 
-def money(value):
-    try:
-        return float(value or 0)
-    except (ValueError, TypeError):
-        return 0.0
+# ============================================================
+# DASHBOARD DATA
+# ============================================================
 
+def get_dashboard_data(user_id):
 
-def make_receipt_number():
-    return (
-        "MKP-"
-        + datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
+    conn = get_db()
+
+    today = datetime.now().strftime(
+        "%Y-%m-%d"
     )
 
+    month = datetime.now().strftime(
+        "%Y-%m"
+    )
 
-def normalize_phone(phone):
-    phone = (
-        phone or ""
-    ).strip().replace(" ", "").replace("-", "")
+    # --------------------------------------------------------
+    # TODAY SALES
+    # --------------------------------------------------------
 
-    if phone.startswith("+255"):
-        return phone[1:]
+    today_sales_row = conn.execute(
+        """
+        SELECT
+            COALESCE(SUM(amount - discount), 0) AS total,
+            COUNT(*) AS count
+        FROM receipts
+        WHERE user_id = ?
+        AND substr(created_at, 1, 10) = ?
+        """,
+        (
+            user_id,
+            today
+        )
+    ).fetchone()
 
-    if phone.startswith("0") and len(phone) >= 9:
-        return "255" + phone[1:]
+    today_sales = float(
+        today_sales_row["total"] or 0
+    )
 
-    return phone
+    today_transactions = int(
+        today_sales_row["count"] or 0
+    )
+
+    # --------------------------------------------------------
+    # MONTH SALES
+    # --------------------------------------------------------
+
+    month_sales_row = conn.execute(
+        """
+        SELECT
+            COALESCE(SUM(amount - discount), 0) AS total
+        FROM receipts
+        WHERE user_id = ?
+        AND substr(created_at, 1, 7) = ?
+        """,
+        (
+            user_id,
+            month
+        )
+    ).fetchone()
+
+    month_sales = float(
+        month_sales_row["total"] or 0
+    )
+
+    # --------------------------------------------------------
+    # PROFIT
+    # --------------------------------------------------------
+
+    profit_row = conn.execute(
+        """
+        SELECT
+            COALESCE(SUM(profit), 0) AS profit
+        FROM receipts
+        WHERE user_id = ?
+        AND substr(created_at, 1, 10) = ?
+        """,
+        (
+            user_id,
+            today
+        )
+    ).fetchone()
+
+    today_profit = float(
+        profit_row["profit"] or 0
+    )
+
+    # --------------------------------------------------------
+    # EXPENSES
+    # --------------------------------------------------------
+
+    expense_row = conn.execute(
+        """
+        SELECT
+            COALESCE(SUM(amount), 0) AS total
+        FROM expenses
+        WHERE user_id = ?
+        AND substr(
+            COALESCE(expense_date, created_at),
+            1,
+            10
+        ) = ?
+        """,
+        (
+            user_id,
+            today
+        )
+    ).fetchone()
+
+    today_expenses = float(
+        expense_row["total"] or 0
+    )
+
+    # --------------------------------------------------------
+    # PRODUCTS
+    # --------------------------------------------------------
+
+    product_count_row = conn.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM products
+        WHERE user_id = ?
+        """,
+        (user_id,)
+    ).fetchone()
+
+    product_count = int(
+        product_count_row["count"] or 0
+    )
+
+    # --------------------------------------------------------
+    # CUSTOMERS
+    # --------------------------------------------------------
+
+    customer_count_row = conn.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM customers
+        WHERE user_id = ?
+        """,
+        (user_id,)
+    ).fetchone()
+
+    customer_count = int(
+        customer_count_row["count"] or 0
+    )
+
+    # --------------------------------------------------------
+    # DEBT
+    # --------------------------------------------------------
+
+    debt_row = conn.execute(
+        """
+        SELECT
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN balance > 0
+                        THEN balance
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS total
+        FROM debts
+        WHERE user_id = ?
+        """,
+        (user_id,)
+    ).fetchone()
+
+    total_debt = float(
+        debt_row["total"] or 0
+    )
+
+    # --------------------------------------------------------
+    # LOW STOCK
+    # --------------------------------------------------------
+
+    low_stock = conn.execute(
+        """
+        SELECT *
+        FROM products
+        WHERE user_id = ?
+        AND quantity <= min_stock
+        ORDER BY quantity ASC
+        LIMIT 20
+        """,
+        (user_id,)
+    ).fetchall()
+
+    # --------------------------------------------------------
+    # RECENT SALES
+    # --------------------------------------------------------
+
+    recent_sales = conn.execute(
+        """
+        SELECT *
+        FROM receipts
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 10
+        """,
+        (user_id,)
+    ).fetchall()
+
+    # --------------------------------------------------------
+    # NOTIFICATIONS
+    # --------------------------------------------------------
+
+    notifications = conn.execute(
+        """
+        SELECT *
+        FROM notifications
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 10
+        """,
+        (user_id,)
+    ).fetchall()
+
+    unread_notifications = conn.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM notifications
+        WHERE user_id = ?
+        AND is_read = 0
+        """,
+        (user_id,)
+    ).fetchone()["count"]
+
+    conn.close()
+
+    stats = {
+        "today_sales": today_sales,
+        "today_transactions": today_transactions,
+        "month_sales": month_sales,
+        "today_profit": today_profit,
+        "today_expenses": today_expenses,
+        "products": product_count,
+        "customers": customer_count,
+        "total_debt": total_debt,
+        "unread_notifications": unread_notifications
+    }
+
+    return {
+        "stats": stats,
+        "sales_stats": stats,
+        "recent_sales": recent_sales,
+        "receipts": recent_sales,
+        "low_stock": low_stock,
+        "notifications": notifications
+    }
 
 
 # ============================================================
 # TEMPLATE GLOBALS
-# IMPORTANT FIX:
-# user.html uses {{ current_user.email }}
 # ============================================================
 
 @app.context_processor
 def inject_globals():
 
-    logged_user = current_user()
+    user = get_current_user()
 
     return {
         "app_name": get_setting(
@@ -536,19 +969,26 @@ def inject_globals():
             "Mkolani POS"
         ),
 
+        "business_name": get_setting(
+            "business_name",
+            "Mkolani Stationery"
+        ),
+
         "system_currency": get_setting(
             "currency",
             "TZS"
         ),
 
-        # Compatibility with templates
-        "current_user": logged_user,
+        # IMPORTANT FIX:
+        # Templates such as user.html use current_user
+        "current_user": user,
 
-        # Keep the old variable too
-        "current_user_obj": logged_user,
+        # Compatibility with old templates
+        "current_user_obj": user,
 
-        # Useful session aliases
-        "logged_in_user": logged_user,
+        "money": money,
+
+        "now": datetime.now
     }
 
 
@@ -561,31 +1001,29 @@ def login_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
 
-        if not session.get("user_id"):
-            return redirect(url_for("index"))
-
-        user = current_user()
+        user = get_current_user()
 
         if not user:
+            flash(
+                "Tafadhali ingia kwanza.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("login")
+            )
+
+        if not user["is_active"]:
             session.clear()
 
             flash(
-                "Akaunti yako haipatikani.",
+                "Akaunti yako imezuiwa.",
                 "danger"
             )
 
-            return redirect(url_for("index"))
-
-        if user["status"] == "disabled":
-
-            session.clear()
-
-            flash(
-                "Akaunti yako imezimwa na administrator.",
-                "danger"
+            return redirect(
+                url_for("login")
             )
-
-            return redirect(url_for("index"))
 
         return func(*args, **kwargs)
 
@@ -599,27 +1037,28 @@ def roles_required(*roles):
         @wraps(func)
         def wrapper(*args, **kwargs):
 
-            if not session.get("user_id"):
-                return redirect(url_for("index"))
-
-            user = current_user()
+            user = get_current_user()
 
             if not user:
+                return redirect(
+                    url_for("login")
+                )
 
-                session.clear()
-
-                return redirect(url_for("index"))
-
-            if (user["role"] or "Staff") not in roles:
+            if user["role"] not in roles:
 
                 flash(
-                    "Huna ruhusa ya kutumia sehemu hii.",
+                    "Huna ruhusa ya kufanya kitendo hiki.",
                     "danger"
                 )
 
-                return redirect(url_for("dashboard"))
+                return redirect(
+                    url_for("dashboard")
+                )
 
-            return func(*args, **kwargs)
+            return func(
+                *args,
+                **kwargs
+            )
 
         return wrapper
 
@@ -631,27 +1070,31 @@ def master_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
 
-        if not session.get("user_id"):
-            return redirect(url_for("index"))
-
-        user = current_user()
+        user = get_current_user()
 
         if not user:
+            return redirect(
+                url_for("login")
+            )
 
-            session.clear()
-
-            return redirect(url_for("index"))
-
-        if user["role"] != "Master":
+        if (
+            user["role"] != "Master"
+            and not user["is_admin"]
+        ):
 
             flash(
-                "Sehemu hii ni ya Master pekee.",
+                "Master/Admin pekee ndiye anaweza kufungua ukurasa huu.",
                 "danger"
             )
 
-            return redirect(url_for("dashboard"))
+            return redirect(
+                url_for("dashboard")
+            )
 
-        return func(*args, **kwargs)
+        return func(
+            *args,
+            **kwargs
+        )
 
     return wrapper
 
@@ -660,55 +1103,56 @@ def master_required(func):
 # LOGIN
 # ============================================================
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-
-    if session.get("user_id"):
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        return login()
-
-    return render_template("login.html")
-
-
-@app.route("/login", methods=["GET", "POST"])
+@app.route(
+    "/",
+    methods=["GET", "POST"]
+)
+@app.route(
+    "/login",
+    methods=["GET", "POST"]
+)
 def login():
 
-    if request.method == "GET":
-        return redirect(url_for("index"))
+    if request.method == "POST":
 
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    password = request.form.get(
-        "password",
-        ""
-    )
-
-    if not email or not password:
-
-        flash(
-            "Weka email na password.",
-            "danger"
+        email = (
+            request.form.get(
+                "email",
+                ""
+            )
+            .strip()
+            .lower()
         )
 
-        return redirect(url_for("index"))
+        password = request.form.get(
+            "password",
+            ""
+        )
 
-    conn = get_db()
+        if not email or not password:
 
-    try:
+            flash(
+                "Weka email na password.",
+                "warning"
+            )
+
+            return render_template(
+                "login.html"
+            )
+
+        conn = get_db()
 
         user = conn.execute(
             """
             SELECT *
             FROM users
-            WHERE lower(email)=?
+            WHERE lower(email) = ?
+            LIMIT 1
             """,
             (email,)
         ).fetchone()
+
+        conn.close()
 
         if not user:
 
@@ -717,255 +1161,263 @@ def login():
                 "danger"
             )
 
-            return redirect(url_for("index"))
+            return render_template(
+                "login.html"
+            )
 
-        if user["status"] == "disabled":
+        if not user["is_active"]:
 
             flash(
-                "Akaunti hii imezimwa na administrator.",
+                "Akaunti yako imezuiwa.",
                 "danger"
             )
 
-            return redirect(url_for("index"))
+            return render_template(
+                "login.html"
+            )
+
+        valid_password = False
 
         stored_password = user["password"] or ""
 
-        valid = False
-        old_plain_password = False
-
         try:
-            valid = check_password_hash(
+
+            valid_password = check_password_hash(
                 stored_password,
                 password
             )
+
         except Exception:
-            valid = False
 
-        # Compatibility with old plain passwords
-        if not valid and stored_password == password:
+            valid_password = (
+                stored_password == password
+            )
 
-            valid = True
-            old_plain_password = True
+        # ----------------------------------------------------
+        # Legacy plain password migration
+        # ----------------------------------------------------
 
-        if not valid:
+        if valid_password:
+
+            pass
+
+        elif stored_password == password:
+
+            valid_password = True
+
+            conn = get_db()
+
+            conn.execute(
+                """
+                UPDATE users
+                SET password = ?
+                WHERE id = ?
+                """,
+                (
+                    generate_password_hash(
+                        password
+                    ),
+                    user["id"]
+                )
+            )
+
+            conn.commit()
+            conn.close()
+
+        if not valid_password:
 
             flash(
                 "Email au password si sahihi.",
                 "danger"
             )
 
-            return redirect(url_for("index"))
-
-        now = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-
-        if old_plain_password:
-
-            conn.execute(
-                """
-                UPDATE users
-                SET password=?
-                WHERE id=?
-                """,
-                (
-                    generate_password_hash(password),
-                    user["id"]
-                )
+            return render_template(
+                "login.html"
             )
 
-        conn.execute(
-            """
-            UPDATE users
-            SET last_login=?
-            WHERE id=?
-            """,
-            (
-                now,
-                user["id"]
-            )
-        )
-
-        conn.commit()
-
-        # IMPORTANT:
-        # Clear old session only after DB login succeeds.
         session.clear()
 
         session["user_id"] = user["id"]
-        session["email"] = user["email"]
-        session["business_name"] = (
-            user["business_name"]
-            or "Mkolani Enterprise"
-        )
-        session["role"] = (
-            user["role"]
-            or "Staff"
-        )
+
+        session["role"] = user["role"]
+
+        session.permanent = True
 
         log_action(
+            user["id"],
             "LOGIN",
-            f"User {email} ameingia kwenye mfumo."
+            "User logged in"
         )
 
-        return redirect(url_for("dashboard"))
+        return redirect(
+            url_for("dashboard")
+        )
 
-    finally:
-        conn.close()
+    user = get_current_user()
+
+    if user:
+
+        return redirect(
+            url_for("dashboard")
+        )
+
+    return render_template(
+        "login.html"
+    )
 
 
 # ============================================================
 # REGISTER
 # ============================================================
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route(
+    "/register",
+    methods=["GET", "POST"]
+)
 def register():
 
-    if request.method == "GET":
-        return render_template("register.html")
+    if request.method == "POST":
 
-    business_name = request.form.get(
-        "business_name",
-        "Mkolani Enterprise"
-    ).strip()
+        name = request.form.get(
+            "name",
+            ""
+        ).strip()
 
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
+        email = (
+            request.form.get(
+                "email",
+                ""
+            )
+            .strip()
+            .lower()
+        )
 
-    password = request.form.get(
-        "password",
-        ""
-    )
-
-    confirm_password = request.form.get(
-        "confirm_password",
-        request.form.get(
-            "password_confirm",
+        password = request.form.get(
+            "password",
             ""
         )
-    )
 
-    phone = request.form.get(
-        "phone",
-        request.form.get(
-            "phone_number",
+        business_name = request.form.get(
+            "business_name",
+            "Mkolani Stationery"
+        ).strip()
+
+        phone = request.form.get(
+            "phone",
             ""
-        )
-    ).strip()
+        ).strip()
 
-    if not email or not password:
+        if not name:
+            flash(
+                "Jina linahitajika.",
+                "warning"
+            )
 
-        flash(
-            "Email na password vinahitajika.",
-            "danger"
-        )
+            return render_template(
+                "register.html"
+            )
 
-        return redirect(url_for("register"))
+        if not email:
+            flash(
+                "Email inahitajika.",
+                "warning"
+            )
 
-    if len(password) < 6:
+            return render_template(
+                "register.html"
+            )
 
-        flash(
-            "Password iwe na angalau characters 6.",
-            "danger"
-        )
+        if len(password) < 4:
 
-        return redirect(url_for("register"))
+            flash(
+                "Password iwe na angalau characters 4.",
+                "warning"
+            )
 
-    if confirm_password and confirm_password != password:
+            return render_template(
+                "register.html"
+            )
 
-        flash(
-            "Passwords hazifanani.",
-            "danger"
-        )
-
-        return redirect(url_for("register"))
-
-    conn = get_db()
-
-    try:
+        conn = get_db()
 
         existing = conn.execute(
             """
             SELECT id
             FROM users
-            WHERE lower(email)=?
+            WHERE lower(email) = ?
             """,
             (email,)
         ).fetchone()
 
         if existing:
 
+            conn.close()
+
             flash(
-                "Email hii tayari ipo kwenye mfumo.",
+                "Email hiyo tayari imesajiliwa.",
                 "danger"
             )
 
-            return redirect(url_for("register"))
+            return render_template(
+                "register.html"
+            )
 
-        total_users = conn.execute(
-            "SELECT COUNT(*) AS total FROM users"
-        ).fetchone()["total"]
+        count = conn.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM users
+            """
+        ).fetchone()["count"]
 
-        role = (
-            "Master"
-            if total_users == 0
-            else "Staff"
-        )
+        if count == 0:
+            role = "Master"
+            is_admin = 1
+        else:
+            role = "Staff"
+            is_admin = 0
 
-        is_admin = (
-            1
-            if total_users == 0
-            else 0
-        )
-
-        cur = conn.execute(
+        conn.execute(
             """
             INSERT INTO users
             (
+                name,
                 email,
                 password,
-                phone_number,
-                business_name,
-                business_type,
-                currency,
-                is_admin,
                 role,
-                status,
-                created_at
+                is_admin,
+                is_active,
+                business_name,
+                phone
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?)
             """,
             (
+                name,
                 email,
                 generate_password_hash(password),
-                phone,
-                business_name,
-                "RETAIL",
-                "TZS",
-                is_admin,
                 role,
-                "active",
-                datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                is_admin,
+                business_name or "Mkolani Stationery",
+                phone
             )
         )
 
-        user_id = cur.lastrowid
-
         conn.commit()
 
-    finally:
         conn.close()
 
-    flash(
-        "Akaunti imetengenezwa. Sasa ingia.",
-        "success"
-    )
+        flash(
+            "Usajili umefanikiwa. Sasa ingia.",
+            "success"
+        )
 
-    return redirect(url_for("index"))
+        return redirect(
+            url_for("login")
+        )
+
+    return render_template(
+        "register.html"
+    )
 
 
 # ============================================================
@@ -978,190 +1430,84 @@ def register():
 )
 def forgot_password():
 
-    if request.method == "GET":
-        return render_template(
-            "forgot_password.html"
+    if request.method == "POST":
+
+        email = (
+            request.form.get(
+                "email",
+                ""
+            )
+            .strip()
+            .lower()
         )
 
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    if not email:
-
-        flash(
-            "Weka email yako.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("forgot_password")
-        )
-
-    conn = get_db()
-
-    try:
+        conn = get_db()
 
         user = conn.execute(
             """
             SELECT *
             FROM users
-            WHERE lower(email)=?
+            WHERE lower(email) = ?
             """,
             (email,)
         ).fetchone()
 
-        if not user:
+        if user:
+
+            token = secrets.token_urlsafe(
+                32
+            )
+
+            expires = (
+                datetime.now()
+                + timedelta(minutes=30)
+            ).isoformat()
+
+            conn.execute(
+                """
+                UPDATE users
+                SET reset_token = ?,
+                    reset_expires = ?
+                WHERE id = ?
+                """,
+                (
+                    token,
+                    expires,
+                    user["id"]
+                )
+            )
+
+            conn.commit()
+
+            conn.close()
+
+            reset_link = url_for(
+                "reset_password",
+                token=token,
+                _external=True
+            )
 
             flash(
-                "Kama email ipo kwenye mfumo, "
-                "maelekezo ya kurejesha password yataendelea.",
+                f"Link ya kubadilisha password: {reset_link}",
                 "info"
             )
 
-            return redirect(url_for("index"))
+        else:
 
-        otp = f"{random.randint(0, 999999):06d}"
-
-        expires = datetime.now() + timedelta(
-            minutes=10
-        )
-
-        conn.execute(
-            """
-            UPDATE users
-            SET reset_otp=?,
-                reset_otp_expires=?
-            WHERE id=?
-            """,
-            (
-                otp,
-                expires.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
-                user["id"]
-            )
-        )
-
-        conn.commit()
-
-        phone = (
-            user["phone_number"]
-            or user["phone"]
-            or ""
-        )
-
-        api_key = (
-            user["beem_api_key"]
-            or user["api_key"]
-            or os.environ.get(
-                "BEEM_API_KEY"
-            )
-        )
-
-        secret_key = (
-            user["beem_secret_key"]
-            or user["secret_key"]
-            or os.environ.get(
-                "BEEM_SECRET_KEY"
-            )
-        )
-
-        sender_id = (
-            user["beem_sender_id"]
-            or user["sender_id"]
-            or os.environ.get(
-                "BEEM_SENDER_ID",
-                "INFO"
-            )
-        )
-
-        sent = False
-
-        if phone and api_key and secret_key:
-
-            try:
-
-                recipient = normalize_phone(phone)
-
-                response = requests.post(
-                    "https://api.beem.africa/v1/send",
-                    auth=(
-                        api_key,
-                        secret_key
-                    ),
-                    json={
-                        "source_addr": sender_id,
-                        "schedule_time": "",
-                        "encoding": "0",
-                        "message": (
-                            "Mkolani POS OTP: "
-                            f"{otp}. "
-                            "Itumie ndani ya dakika 10."
-                        ),
-                        "recipients": [
-                            {
-                                "recipient_id": 1,
-                                "dest_addr": recipient
-                            }
-                        ]
-                    },
-                    timeout=15
-                )
-
-                sent = response.ok
-
-            except Exception as exc:
-
-                print(
-                    "RESET SMS ERROR:",
-                    exc
-                )
-
-        if sent:
+            conn.close()
 
             flash(
-                "OTP imetumwa kwenye namba ya simu "
-                "iliy登録wa. Itumie ndani ya dakika 10.",
-                "success"
+                "Kama email ipo kwenye mfumo, utaratibu wa reset umeanzishwa.",
+                "info"
             )
 
-            return redirect(
-                url_for(
-                    "reset_password",
-                    email=email
-                )
-            )
-
-        if os.environ.get(
-            "SHOW_RESET_OTP",
-            "0"
-        ) == "1":
-
-            flash(
-                f"TEST MODE - OTP yako ni {otp}. "
-                "Inaisha baada ya dakika 10.",
-                "warning"
-            )
-
-            return redirect(
-                url_for(
-                    "reset_password",
-                    email=email
-                )
-            )
-
-        flash(
-            "OTP haikutumwa kwa sababu huduma ya SMS "
-            "haija-configurewa. Wasiliana na Master.",
-            "warning"
+        return redirect(
+            url_for("forgot_password")
         )
 
-        return redirect(url_for("index"))
-
-    finally:
-        conn.close()
+    return render_template(
+        "forgot_password.html"
+    )
 
 
 # ============================================================
@@ -1169,182 +1515,131 @@ def forgot_password():
 # ============================================================
 
 @app.route(
-    "/reset-password",
+    "/reset-password/<token>",
     methods=["GET", "POST"]
 )
-def reset_password():
-
-    if request.method == "GET":
-
-        email = request.args.get(
-            "email",
-            ""
-        ).strip().lower()
-
-        return render_template(
-            "reset_password.html",
-            email=email
-        )
-
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    otp = request.form.get(
-        "otp",
-        ""
-    ).strip()
-
-    new_password = request.form.get(
-        "password",
-        ""
-    )
-
-    confirm = request.form.get(
-        "confirm_password",
-        request.form.get(
-            "password_confirm",
-            ""
-        )
-    )
-
-    if not email or not otp or not new_password:
-
-        flash(
-            "Email, OTP na password mpya vinahitajika.",
-            "danger"
-        )
-
-        return redirect(
-            url_for(
-                "reset_password",
-                email=email
-            )
-        )
-
-    if len(new_password) < 6:
-
-        flash(
-            "Password iwe na angalau characters 6.",
-            "danger"
-        )
-
-        return redirect(
-            url_for(
-                "reset_password",
-                email=email
-            )
-        )
-
-    if confirm and confirm != new_password:
-
-        flash(
-            "Passwords hazifanani.",
-            "danger"
-        )
-
-        return redirect(
-            url_for(
-                "reset_password",
-                email=email
-            )
-        )
+def reset_password(token):
 
     conn = get_db()
 
-    try:
+    user = conn.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE reset_token = ?
+        """,
+        (token,)
+    ).fetchone()
 
-        user = conn.execute(
-            """
-            SELECT *
-            FROM users
-            WHERE lower(email)=?
-            """,
-            (email,)
-        ).fetchone()
+    if not user:
 
-        if not user:
+        conn.close()
 
-            flash(
-                "OTP au email si sahihi.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("forgot_password")
-            )
-
-        expires_text = (
-            user["reset_otp_expires"]
-            or ""
+        flash(
+            "Reset link si sahihi au imekwisha.",
+            "danger"
         )
 
-        expired = True
+        return redirect(
+            url_for("login")
+        )
 
-        try:
+    try:
 
-            expired = (
-                datetime.now()
-                >
-                datetime.strptime(
-                    expires_text,
-                    "%Y-%m-%d %H:%M:%S"
-                )
-            )
+        expires = datetime.fromisoformat(
+            user["reset_expires"]
+        )
 
-        except (
-            ValueError,
-            TypeError
-        ):
+    except Exception:
 
-            expired = True
+        expires = datetime.min
 
-        if (
-            not user["reset_otp"]
-            or user["reset_otp"] != otp
-            or expired
-        ):
+    if datetime.now() > expires:
+
+        conn.close()
+
+        flash(
+            "Reset link imekwisha muda.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("forgot_password")
+        )
+
+    if request.method == "POST":
+
+        password = request.form.get(
+            "password",
+            ""
+        )
+
+        confirm = request.form.get(
+            "confirm_password",
+            password
+        )
+
+        if len(password) < 4:
+
+            conn.close()
 
             flash(
-                "OTP si sahihi au imekwisha muda.",
-                "danger"
+                "Password iwe na angalau characters 4.",
+                "warning"
             )
 
-            return redirect(
-                url_for(
-                    "reset_password",
-                    email=email
-                )
+            return render_template(
+                "reset_password.html",
+                token=token
+            )
+
+        if password != confirm:
+
+            conn.close()
+
+            flash(
+                "Passwords hazifanani.",
+                "warning"
+            )
+
+            return render_template(
+                "reset_password.html",
+                token=token
             )
 
         conn.execute(
             """
             UPDATE users
-            SET password=?,
-                reset_otp=NULL,
-                reset_otp_expires=NULL
-            WHERE id=?
+            SET password = ?,
+                reset_token = NULL,
+                reset_expires = NULL
+            WHERE id = ?
             """,
             (
-                generate_password_hash(
-                    new_password
-                ),
+                generate_password_hash(password),
                 user["id"]
             )
         )
 
         conn.commit()
 
-    finally:
         conn.close()
 
-    flash(
-        "Password imebadilishwa. Sasa unaweza kuingia.",
-        "success"
-    )
+        flash(
+            "Password imebadilishwa. Sasa unaweza kuingia.",
+            "success"
+        )
 
-    return redirect(url_for("index"))
+        return redirect(
+            url_for("login")
+        )
+
+    conn.close()
+
+    return render_template(
+        "reset_password.html",
+        token=token
+    )
 
 
 # ============================================================
@@ -1353,88 +1648,85 @@ def reset_password():
 
 @app.route(
     "/change-password",
-    methods=["POST"]
+    methods=["GET", "POST"]
 )
 @login_required
 def change_password():
 
-    old_password = request.form.get(
-        "old_password",
-        ""
-    )
+    user = get_current_user()
 
-    new_password = request.form.get(
-        "new_password",
-        ""
-    )
+    if request.method == "POST":
 
-    confirm = request.form.get(
-        "confirm_password",
-        ""
-    )
-
-    user = current_user()
-
-    if not user:
-
-        session.clear()
-
-        return redirect(url_for("index"))
-
-    if not old_password or not new_password:
-
-        flash(
-            "Jaza password ya zamani na mpya.",
-            "danger"
+        old_password = request.form.get(
+            "old_password",
+            ""
         )
 
-        return redirect(url_for("profile"))
-
-    if (
-        len(new_password) < 6
-        or new_password != confirm
-    ):
-
-        flash(
-            "Password mpya lazima iwe na "
-            "angalau characters 6 na zifanane.",
-            "danger"
+        new_password = request.form.get(
+            "new_password",
+            ""
         )
 
-        return redirect(url_for("profile"))
-
-    try:
-
-        valid = check_password_hash(
-            user["password"],
-            old_password
+        confirm = request.form.get(
+            "confirm_password",
+            ""
         )
 
-    except Exception:
+        valid = False
 
-        valid = (
-            user["password"]
-            == old_password
-        )
+        try:
 
-    if not valid:
+            valid = check_password_hash(
+                user["password"],
+                old_password
+            )
 
-        flash(
-            "Password ya zamani si sahihi.",
-            "danger"
-        )
+        except Exception:
 
-        return redirect(url_for("profile"))
+            valid = (
+                user["password"] == old_password
+            )
 
-    conn = get_db()
+        if not valid:
 
-    try:
+            flash(
+                "Password ya zamani si sahihi.",
+                "danger"
+            )
+
+            return render_template(
+                "change_password.html"
+            )
+
+        if len(new_password) < 4:
+
+            flash(
+                "Password mpya iwe na angalau characters 4.",
+                "warning"
+            )
+
+            return render_template(
+                "change_password.html"
+            )
+
+        if new_password != confirm:
+
+            flash(
+                "Password mpya hazifanani.",
+                "warning"
+            )
+
+            return render_template(
+                "change_password.html"
+            )
+
+        conn = get_db()
 
         conn.execute(
             """
             UPDATE users
-            SET password=?
-            WHERE id=?
+            SET password = ?
+            WHERE id = ?
             """,
             (
                 generate_password_hash(
@@ -1445,21 +1737,26 @@ def change_password():
         )
 
         conn.commit()
-
-    finally:
         conn.close()
 
-    log_action(
-        "PASSWORD_CHANGE",
-        "User amebadilisha password."
-    )
+        log_action(
+            user["id"],
+            "CHANGE_PASSWORD",
+            "Password changed"
+        )
 
-    flash(
-        "Password imebadilishwa.",
-        "success"
-    )
+        flash(
+            "Password imebadilishwa.",
+            "success"
+        )
 
-    return redirect(url_for("profile"))
+        return redirect(
+            url_for("dashboard")
+        )
+
+    return render_template(
+        "change_password.html"
+    )
 
 
 # ============================================================
@@ -1471,199 +1768,22 @@ def change_password():
 @login_required
 def dashboard():
 
-    user = current_user()
+    user = get_current_user()
 
-    if not user:
+    data = get_dashboard_data(
+        user["id"]
+    )
 
-        session.clear()
+    # IMPORTANT:
+    # current_user is explicitly passed too.
+    # This protects against templates expecting it.
 
-        return redirect(url_for("index"))
-
-    uid = user["id"]
-
-    conn = get_db()
-
-    try:
-
-        sales = conn.execute("""
-            SELECT
-                COALESCE(SUM(amount),0) AS total,
-                COALESCE(SUM(debt),0) AS debt,
-                COUNT(*) AS receipts
-            FROM receipts
-            WHERE user_id=?
-        """, (uid,)).fetchone()
-
-        expenses = conn.execute(
-            """
-            SELECT COALESCE(SUM(amount),0) AS total
-            FROM expenses
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()
-
-        products = conn.execute(
-            """
-            SELECT COUNT(*) AS total
-            FROM products
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()
-
-        customers = conn.execute(
-            """
-            SELECT COUNT(*) AS total
-            FROM customers
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()
-
-        stock_value = conn.execute(
-            """
-            SELECT
-                COALESCE(
-                    SUM(quantity * buying_price),
-                    0
-                ) AS total
-            FROM products
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()
-
-        profit = conn.execute(
-            """
-            SELECT COALESCE(SUM(profit),0) AS total
-            FROM receipts
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()
-
-        recent_sales = conn.execute(
-            """
-            SELECT *
-            FROM receipts
-            WHERE user_id=?
-            ORDER BY id DESC
-            LIMIT 10
-            """,
-            (uid,)
-        ).fetchall()
-
-        low_stock = conn.execute(
-            """
-            SELECT *
-            FROM products
-            WHERE user_id=?
-              AND quantity<=minimum_stock
-            ORDER BY quantity ASC
-            LIMIT 10
-            """,
-            (uid,)
-        ).fetchall()
-
-        unread_notifications = conn.execute(
-            """
-            SELECT *
-            FROM notifications
-            WHERE user_id=?
-              AND is_read=0
-            ORDER BY id DESC
-            LIMIT 10
-            """,
-            (uid,)
-        ).fetchall()
-
-    finally:
-        conn.close()
-
-    stats = {
-        "sales": money(sales["total"]),
-        "paid": (
-            money(sales["total"])
-            -
-            money(sales["debt"])
-        ),
-        "debt": money(sales["debt"]),
-        "receipts": sales["receipts"] or 0,
-        "expenses": money(expenses["total"]),
-        "profit": (
-            money(profit["total"])
-            -
-            money(expenses["total"])
-        ),
-        "products": products["total"] or 0,
-        "customers": customers["total"] or 0,
-        "stock_value": money(
-            stock_value["total"]
-        )
-    }
-
-    # IMPORTANT FIX:
-    # user.html expects current_user
     return render_template(
         "user.html",
         user=user,
         current_user=user,
-        stats=stats,
-        sales_stats=stats,
-        recent_sales=recent_sales,
-        receipts=recent_sales,
-        low_stock=low_stock,
-        notifications=unread_notifications
+        **data
     )
-
-
-@app.route("/api/dashboard")
-@login_required
-def api_dashboard():
-
-    uid = session["user_id"]
-
-    conn = get_db()
-
-    try:
-
-        sales = conn.execute(
-            """
-            SELECT
-                COALESCE(SUM(amount),0) sales,
-                COALESCE(SUM(debt),0) debt,
-                COALESCE(SUM(profit),0) profit,
-                COUNT(*) receipts
-            FROM receipts
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()
-
-        expenses = conn.execute(
-            """
-            SELECT COALESCE(SUM(amount),0) total
-            FROM expenses
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()["total"]
-
-    finally:
-        conn.close()
-
-    return jsonify({
-        "sales": money(sales["sales"]),
-        "debt": money(sales["debt"]),
-        "receipts": sales["receipts"],
-        "profit": (
-            money(sales["profit"])
-            -
-            money(expenses)
-        ),
-        "expenses": money(expenses)
-    })
 
 
 # ============================================================
@@ -1677,246 +1797,463 @@ def api_dashboard():
 @login_required
 def sales():
 
-    user = current_user()
-    uid = user["id"]
+    user = get_current_user()
 
     if request.method == "POST":
 
-        customer_name = request.form.get(
-            "customer_name",
-            "Walk-in Customer"
-        ).strip() or "Walk-in Customer"
+        try:
 
-        phone = request.form.get(
-            "phone",
-            ""
-        ).strip()
-
-        item = request.form.get(
-            "service_item",
-            request.form.get(
-                "item",
+            customer_name = request.form.get(
+                "customer_name",
                 ""
+            ).strip()
+
+            customer_phone = request.form.get(
+                "customer_phone",
+                ""
+            ).strip()
+
+            payment_method = request.form.get(
+                "payment_method",
+                "Cash"
             )
-        ).strip()
 
-        quantity = max(
-            money(
-                request.form.get(
-                    "qty",
-                    1
-                )
-            ),
-            0.01
-        )
+            notes = request.form.get(
+                "notes",
+                ""
+            ).strip()
 
-        total = max(
-            money(
-                request.form.get(
-                    "total",
-                    request.form.get(
-                        "amount",
-                        0
-                    )
-                )
-            ),
-            0
-        )
-
-        discount = max(
-            money(
+            discount = float(
                 request.form.get(
                     "discount",
                     0
-                )
-            ),
-            0
-        )
+                ) or 0
+            )
 
-        paid = max(
-            money(
+            paid = float(
                 request.form.get(
                     "paid",
-                    request.form.get(
-                        "amount_paid",
-                        total
-                    )
-                )
-            ),
-            0
-        )
+                    0
+                ) or 0
+            )
 
-        cash_received = max(
-            money(
+            cash_received = float(
                 request.form.get(
                     "cash_received",
                     paid
-                )
-            ),
-            0
-        )
-
-        payment_method = request.form.get(
-            "payment_method",
-            "Cash"
-        ).strip() or "Cash"
-
-        conn = get_db()
-
-        try:
-
-            product = conn.execute(
-                """
-                SELECT *
-                FROM products
-                WHERE user_id=?
-                  AND status='active'
-                  AND (name=? OR sku=?)
-                LIMIT 1
-                """,
-                (
-                    uid,
-                    item,
-                    item
-                )
-            ).fetchone()
-
-            requested_cost = money(
-                request.form.get(
-                    "cost",
-                    0
-                )
+                ) or paid
             )
 
-            if requested_cost <= 0 and product:
+            # ------------------------------------------------
+            # Accept JSON items OR form items
+            # ------------------------------------------------
 
-                requested_cost = (
-                    money(
-                        product["buying_price"]
+            items = []
+
+            if request.is_json:
+
+                data = request.get_json(
+                    silent=True
+                ) or {}
+
+                items = data.get(
+                    "items",
+                    []
+                )
+
+                customer_name = data.get(
+                    "customer_name",
+                    customer_name
+                )
+
+                customer_phone = data.get(
+                    "customer_phone",
+                    customer_phone
+                )
+
+                payment_method = data.get(
+                    "payment_method",
+                    payment_method
+                )
+
+                discount = float(
+                    data.get(
+                        "discount",
+                        discount
+                    ) or 0
+                )
+
+                paid = float(
+                    data.get(
+                        "paid",
+                        paid
+                    ) or 0
+                )
+
+                cash_received = float(
+                    data.get(
+                        "cash_received",
+                        paid
+                    ) or paid
+                )
+
+            else:
+
+                raw_items = request.form.get(
+                    "items",
+                    ""
+                )
+
+                if raw_items:
+
+                    import json
+
+                    try:
+                        items = json.loads(
+                            raw_items
+                        )
+                    except Exception:
+                        items = []
+
+                # ------------------------------------------------
+                # Alternative simple product form
+                # ------------------------------------------------
+
+                product_id = request.form.get(
+                    "product_id"
+                )
+
+                quantity = request.form.get(
+                    "quantity"
+                )
+
+                if product_id and quantity:
+
+                    items = [{
+                        "product_id": int(
+                            product_id
+                        ),
+                        "quantity": float(
+                            quantity
+                        )
+                    }]
+
+            if not items:
+
+                flash(
+                    "Hakuna bidhaa iliyochaguliwa.",
+                    "warning"
+                )
+
+                return redirect(
+                    url_for("sales")
+                )
+
+            conn = get_db()
+
+            processed_items = []
+
+            gross_total = 0
+
+            total_cost = 0
+
+            # ------------------------------------------------
+            # Process products
+            # ------------------------------------------------
+
+            for item in items:
+
+                product_id = int(
+                    item.get(
+                        "product_id",
+                        item.get(
+                            "id",
+                            0
+                        )
                     )
-                    *
-                    quantity
                 )
 
-            net_total = max(
-                total - discount,
-                0
+                quantity = float(
+                    item.get(
+                        "quantity",
+                        item.get(
+                            "qty",
+                            1
+                        )
+                    )
+                    or 0
+                )
+
+                if quantity <= 0:
+                    continue
+
+                product = conn.execute(
+                    """
+                    SELECT *
+                    FROM products
+                    WHERE id = ?
+                    """,
+                    (product_id,)
+                ).fetchone()
+
+                if not product:
+
+                    conn.close()
+
+                    flash(
+                        "Bidhaa haikupatikana.",
+                        "danger"
+                    )
+
+                    return redirect(
+                        url_for("sales")
+                    )
+
+                stock = float(
+                    product["quantity"] or 0
+                )
+
+                if stock < quantity:
+
+                    conn.close()
+
+                    flash(
+                        f"Stock ya {product['name']} haitoshi.",
+                        "danger"
+                    )
+
+                    return redirect(
+                        url_for("sales")
+                    )
+
+                selling_price = float(
+                    item.get(
+                        "price",
+                        product["selling_price"]
+                    )
+                    or product["selling_price"]
+                    or 0
+                )
+
+                buying_price = float(
+                    product["buying_price"]
+                    or 0
+                )
+
+                line_total = (
+                    selling_price
+                    * quantity
+                )
+
+                line_cost = (
+                    buying_price
+                    * quantity
+                )
+
+                gross_total += line_total
+
+                total_cost += line_cost
+
+                processed_items.append({
+                    "product_id": product["id"],
+                    "name": product["name"],
+                    "quantity": quantity,
+                    "price": selling_price,
+                    "cost": buying_price,
+                    "total": line_total
+                })
+
+            if not processed_items:
+
+                conn.close()
+
+                flash(
+                    "Bidhaa halali hazikupatikana.",
+                    "warning"
+                )
+
+                return redirect(
+                    url_for("sales")
+                )
+
+            # ------------------------------------------------
+            # Totals
+            # ------------------------------------------------
+
+            if discount < 0:
+                discount = 0
+
+            if discount > gross_total:
+                discount = gross_total
+
+            net_total = (
+                gross_total
+                - discount
             )
 
-            debt = max(
-                net_total - paid,
-                0
+            if paid < 0:
+                paid = 0
+
+            if paid > net_total:
+                paid = net_total
+
+            debt = (
+                net_total
+                - paid
             )
 
-            change = max(
-                cash_received - paid,
-                0
+            if cash_received < 0:
+                cash_received = 0
+
+            change_amount = max(
+                0,
+                cash_received - paid
             )
 
             profit = (
                 net_total
-                -
-                requested_cost
+                - total_cost
             )
 
-            receipt_number = make_receipt_number()
+            receipt_no = make_receipt_number()
+
+            # ------------------------------------------------
+            # Insert receipt
+            # ------------------------------------------------
+
+            import json
+
+            items_json = json.dumps(
+                processed_items,
+                ensure_ascii=False
+            )
 
             conn.execute(
                 """
                 INSERT INTO receipts
                 (
                     user_id,
+                    receipt_no,
                     customer_name,
-                    service_item,
-                    quantity,
-                    unit_price,
+                    customer_phone,
+                    items,
                     amount,
                     discount,
+                    paid,
                     debt,
-                    phone,
-                    payment_method,
                     cash_received,
-                    change_given,
+                    change_amount,
                     cost,
                     profit,
-                    receipt_number
+                    payment_method,
+                    notes
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    uid,
+                    user["id"],
+                    receipt_no,
                     customer_name,
-                    item,
-                    quantity,
-                    total / quantity
-                    if quantity
-                    else total,
-                    total,
+                    customer_phone,
+                    items_json,
+                    gross_total,
                     discount,
+                    paid,
                     debt,
-                    phone,
-                    payment_method,
                     cash_received,
-                    change,
-                    requested_cost,
+                    change_amount,
+                    total_cost,
                     profit,
-                    receipt_number
+                    payment_method,
+                    notes
                 )
             )
 
-            if customer_name != "Walk-in Customer":
+            receipt_id = conn.execute(
+                """
+                SELECT last_insert_rowid()
+                """
+            ).fetchone()[0]
 
-                existing_customer = conn.execute(
+            # ------------------------------------------------
+            # Reduce stock
+            # ------------------------------------------------
+
+            for item in processed_items:
+
+                conn.execute(
                     """
-                    SELECT id
-                    FROM customers
-                    WHERE user_id=?
-                      AND (
-                          name=?
-                          OR (
-                              phone!=''
-                              AND phone=?
-                          )
-                      )
-                    LIMIT 1
+                    UPDATE products
+                    SET quantity = quantity - ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
                     """,
                     (
-                        uid,
-                        customer_name,
-                        phone
+                        item["quantity"],
+                        item["product_id"]
                     )
-                ).fetchone()
+                )
 
-                if not existing_customer:
+            # ------------------------------------------------
+            # Customer
+            # ------------------------------------------------
+
+            customer_id = None
+
+            if customer_name:
+
+                existing_customer = None
+
+                if customer_phone:
+
+                    existing_customer = conn.execute(
+                        """
+                        SELECT *
+                        FROM customers
+                        WHERE user_id = ?
+                        AND phone = ?
+                        LIMIT 1
+                        """,
+                        (
+                            user["id"],
+                            customer_phone
+                        )
+                    ).fetchone()
+
+                if existing_customer:
+
+                    customer_id = existing_customer["id"]
+
+                else:
 
                     conn.execute(
                         """
                         INSERT INTO customers
-                        (user_id,name,phone)
+                        (
+                            user_id,
+                            name,
+                            phone
+                        )
                         VALUES (?, ?, ?)
                         """,
                         (
-                            uid,
+                            user["id"],
                             customer_name,
-                            phone
+                            customer_phone
                         )
                     )
 
-            if debt > 0:
+                    customer_id = conn.execute(
+                        """
+                        SELECT last_insert_rowid()
+                        """
+                    ).fetchone()[0]
 
-                customer = conn.execute(
-                    """
-                    SELECT id
-                    FROM customers
-                    WHERE user_id=?
-                      AND name=?
-                    LIMIT 1
-                    """,
-                    (
-                        uid,
-                        customer_name
-                    )
-                ).fetchone()
+            # ------------------------------------------------
+            # Debt
+            # ------------------------------------------------
+
+            if debt > 0:
 
                 conn.execute(
                     """
@@ -1925,8 +2262,8 @@ def sales():
                         user_id,
                         customer_id,
                         customer_name,
-                        phone,
-                        reference,
+                        customer_phone,
+                        receipt_id,
                         amount,
                         paid,
                         balance,
@@ -1935,142 +2272,181 @@ def sales():
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        uid,
-                        customer["id"]
-                        if customer
-                        else None,
-                        customer_name,
-                        phone,
-                        receipt_number,
+                        user["id"],
+                        customer_id,
+                        customer_name or "Customer",
+                        customer_phone,
+                        receipt_id,
                         net_total,
                         paid,
                         debt,
-                        "unpaid"
+                        "Pending"
                     )
                 )
 
-            if product:
-
-                current_qty = money(
-                    product["quantity"]
+                add_notification(
+                    user["id"],
+                    "Deni jipya",
+                    f"{customer_name or 'Customer'} ana deni la {money(debt)} TZS.",
+                    "warning"
                 )
 
-                new_quantity = max(
-                    current_qty - quantity,
-                    0
-                )
+            # ------------------------------------------------
+            # Low stock notifications
+            # ------------------------------------------------
 
-                conn.execute(
+            for item in processed_items:
+
+                p = conn.execute(
                     """
-                    UPDATE products
-                    SET quantity=?
-                    WHERE id=?
+                    SELECT *
+                    FROM products
+                    WHERE id = ?
                     """,
-                    (
-                        new_quantity,
-                        product["id"]
-                    )
-                )
+                    (item["product_id"],)
+                ).fetchone()
 
-                if (
-                    new_quantity
-                    <= money(
-                        product["minimum_stock"]
-                    )
-                ):
+                if p:
 
-                    add_notification(
-                        uid,
-                        "Stock iko chini",
-                        (
-                            f"{product['name']} "
-                            "imefikia stock ya chini."
-                        ),
-                        "warning"
-                    )
+                    if float(
+                        p["quantity"] or 0
+                    ) <= float(
+                        p["min_stock"] or 5
+                    ):
+
+                        add_notification(
+                            user["id"],
+                            "Stock iko chini",
+                            f"{p['name']} imebaki {p['quantity']}.",
+                            "warning"
+                        )
 
             conn.commit()
 
-        finally:
             conn.close()
 
-        log_action(
-            "SALE",
-            (
-                f"Sale {receipt_number} "
-                f"ya TZS {net_total:,.2f}"
+            log_action(
+                user["id"],
+                "SALE",
+                f"Receipt {receipt_no}"
             )
-        )
 
-        flash(
-            (
-                "Mauzo yamehifadhiwa. "
-                f"Risiti: {receipt_number}"
-            ),
-            "success"
-        )
+            if request.is_json:
 
-        return redirect(url_for("sales"))
+                return jsonify({
+                    "success": True,
+                    "message": "Mauzo yamehifadhiwa.",
+                    "receipt_id": receipt_id,
+                    "receipt_no": receipt_no,
+                    "total": net_total,
+                    "paid": paid,
+                    "debt": debt,
+                    "change": change_amount,
+                    "profit": profit
+                })
+
+            flash(
+                f"Mauzo yamehifadhiwa. Receipt: {receipt_no}",
+                "success"
+            )
+
+            return redirect(
+                url_for(
+                    "receipt",
+                    receipt_id=receipt_id
+                )
+            )
+
+        except Exception as e:
+
+            try:
+                conn.rollback()
+                conn.close()
+            except Exception:
+                pass
+
+            if request.is_json:
+
+                return jsonify({
+                    "success": False,
+                    "error": str(e)
+                }), 500
+
+            flash(
+                f"Hitilafu kwenye mauzo: {str(e)}",
+                "danger"
+            )
+
+            return redirect(
+                url_for("sales")
+            )
+
+    # --------------------------------------------------------
+    # GET
+    # --------------------------------------------------------
 
     conn = get_db()
 
-    try:
+    products = conn.execute(
+        """
+        SELECT *
+        FROM products
+        WHERE user_id = ?
+        ORDER BY name ASC
+        """,
+        (user["id"],)
+    ).fetchall()
 
-        history = conn.execute(
-            """
-            SELECT *
-            FROM receipts
-            WHERE user_id=?
-            ORDER BY id DESC
-            LIMIT 100
-            """,
-            (uid,)
-        ).fetchall()
+    customers = conn.execute(
+        """
+        SELECT *
+        FROM customers
+        WHERE user_id = ?
+        ORDER BY name ASC
+        """,
+        (user["id"],)
+    ).fetchall()
 
-        products = conn.execute(
-            """
-            SELECT *
-            FROM products
-            WHERE user_id=?
-              AND status='active'
-            ORDER BY name
-            """,
-            (uid,)
-        ).fetchall()
-
-    finally:
-        conn.close()
+    conn.close()
 
     return render_template(
         "sales.html",
-        user=user,
-        sales=history,
-        receipts=history,
-        products=products
+        products=products,
+        customers=customers
     )
 
 
-@app.route("/api/sales")
+# ============================================================
+# SALES API
+# ============================================================
+
+@app.route(
+    "/api/sales",
+    methods=["GET", "POST"]
+)
 @login_required
 def api_sales():
 
+    if request.method == "POST":
+
+        return sales()
+
+    user = get_current_user()
+
     conn = get_db()
 
-    try:
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM receipts
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 100
+        """,
+        (user["id"],)
+    ).fetchall()
 
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM receipts
-            WHERE user_id=?
-            ORDER BY id DESC
-            LIMIT 100
-            """,
-            (session["user_id"],)
-        ).fetchall()
-
-    finally:
-        conn.close()
+    conn.close()
 
     return jsonify([
         dict(row)
@@ -2079,7 +2455,7 @@ def api_sales():
 
 
 # ============================================================
-# PRODUCTS / STOCK
+# PRODUCTS
 # ============================================================
 
 @app.route(
@@ -2089,7 +2465,9 @@ def api_sales():
 @login_required
 def products():
 
-    uid = session["user_id"]
+    user = get_current_user()
+
+    conn = get_db()
 
     if request.method == "POST":
 
@@ -2108,135 +2486,140 @@ def products():
             ""
         ).strip()
 
+        unit = request.form.get(
+            "unit",
+            "pcs"
+        ).strip()
+
         supplier = request.form.get(
             "supplier",
             ""
         ).strip()
 
-        buying_price = money(
-            request.form.get(
-                "buying_price",
-                request.form.get(
-                    "cost",
-                    0
-                )
-            )
-        )
+        description = request.form.get(
+            "description",
+            ""
+        ).strip()
 
-        selling_price = money(
-            request.form.get(
-                "selling_price",
-                request.form.get(
-                    "price",
-                    0
-                )
-            )
-        )
+        try:
 
-        quantity = money(
-            request.form.get(
-                "quantity",
+            buying_price = float(
                 request.form.get(
-                    "qty",
+                    "buying_price",
                     0
-                )
+                ) or 0
             )
-        )
 
-        minimum_stock = money(
-            request.form.get(
-                "minimum_stock",
+            selling_price = float(
+                request.form.get(
+                    "selling_price",
+                    0
+                ) or 0
+            )
+
+            quantity = float(
+                request.form.get(
+                    "quantity",
+                    0
+                ) or 0
+            )
+
+            min_stock = float(
                 request.form.get(
                     "min_stock",
-                    0
-                )
+                    5
+                ) or 5
             )
-        )
 
-        unit = request.form.get(
-            "unit",
-            "pcs"
-        ).strip() or "pcs"
+        except Exception:
+
+            flash(
+                "Bei za bidhaa si sahihi.",
+                "danger"
+            )
+
+            conn.close()
+
+            return redirect(
+                url_for("products")
+            )
 
         if not name:
 
+            conn.close()
+
             flash(
                 "Jina la bidhaa linahitajika.",
-                "danger"
+                "warning"
             )
 
             return redirect(
                 url_for("products")
             )
 
-        conn = get_db()
-
-        try:
-
-            conn.execute(
-                """
-                INSERT INTO products
-                (
-                    user_id,
-                    name,
-                    sku,
-                    category,
-                    supplier,
-                    buying_price,
-                    selling_price,
-                    quantity,
-                    minimum_stock,
-                    unit
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    uid,
-                    name,
-                    sku,
-                    category,
-                    supplier,
-                    buying_price,
-                    selling_price,
-                    quantity,
-                    minimum_stock,
-                    unit
-                )
+        conn.execute(
+            """
+            INSERT INTO products
+            (
+                user_id,
+                name,
+                sku,
+                category,
+                unit,
+                buying_price,
+                selling_price,
+                quantity,
+                min_stock,
+                supplier,
+                description
             )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user["id"],
+                name,
+                sku,
+                category,
+                unit,
+                buying_price,
+                selling_price,
+                quantity,
+                min_stock,
+                supplier,
+                description
+            )
+        )
 
-            conn.commit()
+        conn.commit()
 
-        finally:
-            conn.close()
+        conn.close()
 
         log_action(
-            "PRODUCT_CREATE",
-            f"Bidhaa {name} imeongezwa."
+            user["id"],
+            "ADD_PRODUCT",
+            name
         )
 
         flash(
-            "Bidhaa imeongezwa kwenye stock.",
+            "Bidhaa imeongezwa.",
             "success"
         )
 
-        return redirect(url_for("products"))
+        return redirect(
+            url_for("products")
+        )
 
-    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM products
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user["id"],)
+    ).fetchall()
 
-    try:
-
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM products
-            WHERE user_id=?
-            ORDER BY id DESC
-            """,
-            (uid,)
-        ).fetchall()
-
-    finally:
-        conn.close()
+    conn.close()
 
     return render_template(
         "products.html",
@@ -2244,37 +2627,40 @@ def products():
     )
 
 
+# ============================================================
+# DELETE PRODUCT
+# ============================================================
+
 @app.route(
     "/products/delete/<int:product_id>",
-    methods=["POST"]
+    methods=["POST", "GET"]
 )
 @login_required
 def delete_product(product_id):
 
+    user = get_current_user()
+
     conn = get_db()
 
-    try:
-
-        conn.execute(
-            """
-            DELETE FROM products
-            WHERE id=?
-              AND user_id=?
-            """,
-            (
-                product_id,
-                session["user_id"]
-            )
+    conn.execute(
+        """
+        DELETE FROM products
+        WHERE id = ?
+        AND user_id = ?
+        """,
+        (
+            product_id,
+            user["id"]
         )
+    )
 
-        conn.commit()
-
-    finally:
-        conn.close()
+    conn.commit()
+    conn.close()
 
     log_action(
-        "PRODUCT_DELETE",
-        f"Product {product_id} imefutwa."
+        user["id"],
+        "DELETE_PRODUCT",
+        str(product_id)
     )
 
     flash(
@@ -2282,11 +2668,46 @@ def delete_product(product_id):
         "success"
     )
 
-    return redirect(url_for("products"))
+    return redirect(
+        url_for("products")
+    )
 
 
 # ============================================================
-# CUSTOMERS / CRM
+# PRODUCT API
+# ============================================================
+
+@app.route(
+    "/api/products",
+    methods=["GET"]
+)
+@login_required
+def api_products():
+
+    user = get_current_user()
+
+    conn = get_db()
+
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM products
+        WHERE user_id = ?
+        ORDER BY name
+        """,
+        (user["id"],)
+    ).fetchall()
+
+    conn.close()
+
+    return jsonify([
+        dict(row)
+        for row in rows
+    ])
+
+
+# ============================================================
+# CUSTOMERS
 # ============================================================
 
 @app.route(
@@ -2296,16 +2717,15 @@ def delete_product(product_id):
 @login_required
 def customers():
 
-    uid = session["user_id"]
+    user = get_current_user()
+
+    conn = get_db()
 
     if request.method == "POST":
 
         name = request.form.get(
             "name",
-            request.form.get(
-                "customer_name",
-                ""
-            )
+            ""
         ).strip()
 
         phone = request.form.get(
@@ -2330,54 +2750,46 @@ def customers():
 
         if not name:
 
+            conn.close()
+
             flash(
-                "Jina la mteja linahitajika.",
-                "danger"
+                "Jina la customer linahitajika.",
+                "warning"
             )
 
             return redirect(
                 url_for("customers")
             )
 
-        conn = get_db()
-
-        try:
-
-            conn.execute(
-                """
-                INSERT INTO customers
-                (
-                    user_id,
-                    name,
-                    phone,
-                    email,
-                    address,
-                    notes
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    uid,
-                    name,
-                    phone,
-                    email,
-                    address,
-                    notes
-                )
+        conn.execute(
+            """
+            INSERT INTO customers
+            (
+                user_id,
+                name,
+                phone,
+                email,
+                address,
+                notes
             )
-
-            conn.commit()
-
-        finally:
-            conn.close()
-
-        log_action(
-            "CUSTOMER_CREATE",
-            f"Mteja {name} ameongezwa."
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user["id"],
+                name,
+                phone,
+                email,
+                address,
+                notes
+            )
         )
 
+        conn.commit()
+
+        conn.close()
+
         flash(
-            "Mteja ameongezwa.",
+            "Customer ameongezwa.",
             "success"
         )
 
@@ -2385,22 +2797,17 @@ def customers():
             url_for("customers")
         )
 
-    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM customers
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user["id"],)
+    ).fetchall()
 
-    try:
-
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM customers
-            WHERE user_id=?
-            ORDER BY id DESC
-            """,
-            (uid,)
-        ).fetchall()
-
-    finally:
-        conn.close()
+    conn.close()
 
     return render_template(
         "customers.html",
@@ -2419,7 +2826,9 @@ def customers():
 @login_required
 def debts():
 
-    uid = session["user_id"]
+    user = get_current_user()
+
+    conn = get_db()
 
     if request.method == "POST":
 
@@ -2428,116 +2837,100 @@ def debts():
             ""
         ).strip()
 
-        phone = request.form.get(
-            "phone",
+        customer_phone = request.form.get(
+            "customer_phone",
             ""
         ).strip()
-
-        reference = request.form.get(
-            "reference",
-            ""
-        ).strip()
-
-        amount = max(
-            money(
-                request.form.get(
-                    "amount",
-                    0
-                )
-            ),
-            0
-        )
-
-        paid = min(
-            max(
-                money(
-                    request.form.get(
-                        "paid",
-                        0
-                    )
-                ),
-                0
-            ),
-            amount
-        )
-
-        balance = max(
-            amount - paid,
-            0
-        )
-
-        status = (
-            "paid"
-            if balance <= 0
-            else "partial"
-            if paid > 0
-            else "unpaid"
-        )
-
-        conn = get_db()
 
         try:
 
-            customer = conn.execute(
-                """
-                SELECT id
-                FROM customers
-                WHERE user_id=?
-                  AND name=?
-                LIMIT 1
-                """,
-                (
-                    uid,
-                    customer_name
-                )
-            ).fetchone()
-
-            conn.execute(
-                """
-                INSERT INTO debts
-                (
-                    user_id,
-                    customer_id,
-                    customer_name,
-                    phone,
-                    reference,
-                    amount,
-                    paid,
-                    balance,
-                    status
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    uid,
-                    customer["id"]
-                    if customer
-                    else None,
-                    customer_name,
-                    phone,
-                    reference,
-                    amount,
-                    paid,
-                    balance,
-                    status
-                )
+            amount = float(
+                request.form.get(
+                    "amount",
+                    0
+                ) or 0
             )
 
-            conn.commit()
+            paid = float(
+                request.form.get(
+                    "paid",
+                    0
+                ) or 0
+            )
 
-        finally:
+        except Exception:
+
             conn.close()
 
-        log_action(
-            "DEBT_CREATE",
+            flash(
+                "Amount si sahihi.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("debts")
+            )
+
+        if amount <= 0:
+
+            conn.close()
+
+            flash(
+                "Amount lazima iwe zaidi ya sifuri.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("debts")
+            )
+
+        balance = max(
+            0,
+            amount - paid
+        )
+
+        status = (
+            "Paid"
+            if balance <= 0
+            else "Pending"
+        )
+
+        conn.execute(
+            """
+            INSERT INTO debts
             (
-                f"Deni la {customer_name}: "
-                f"TZS {balance:,.2f}"
+                user_id,
+                customer_name,
+                customer_phone,
+                amount,
+                paid,
+                balance,
+                status,
+                notes
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user["id"],
+                customer_name,
+                customer_phone,
+                amount,
+                paid,
+                balance,
+                status,
+                request.form.get(
+                    "notes",
+                    ""
+                )
             )
         )
 
+        conn.commit()
+
+        conn.close()
+
         flash(
-            "Deni limehifadhiwa.",
+            "Deni limeongezwa.",
             "success"
         )
 
@@ -2545,39 +2938,40 @@ def debts():
             url_for("debts")
         )
 
-    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM debts
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user["id"],)
+    ).fetchall()
 
-    try:
+    total_debt = conn.execute(
+        """
+        SELECT COALESCE(
+            SUM(balance),
+            0
+        )
+        FROM debts
+        WHERE user_id = ?
+        """,
+        (user["id"],)
+    ).fetchone()[0]
 
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM debts
-            WHERE user_id=?
-            ORDER BY id DESC
-            """,
-            (uid,)
-        ).fetchall()
-
-        total_debt = conn.execute(
-            """
-            SELECT COALESCE(SUM(balance),0) AS total
-            FROM debts
-            WHERE user_id=?
-              AND balance>0
-            """,
-            (uid,)
-        ).fetchone()["total"]
-
-    finally:
-        conn.close()
+    conn.close()
 
     return render_template(
         "debts.html",
         debts=rows,
-        total_debt=money(total_debt)
+        total_debt=total_debt
     )
 
+
+# ============================================================
+# PAY DEBT
+# ============================================================
 
 @app.route(
     "/debts/pay/<int:debt_id>",
@@ -2586,30 +2980,33 @@ def debts():
 @login_required
 def pay_debt(debt_id):
 
-    uid = session["user_id"]
+    user = get_current_user()
 
-    amount = money(
-        request.form.get(
-            "amount",
-            0
+    try:
+
+        amount = float(
+            request.form.get(
+                "amount",
+                0
+            ) or 0
         )
-    )
 
-    payment_method = request.form.get(
-        "payment_method",
-        "Cash"
-    )
+    except Exception:
 
-    notes = request.form.get(
-        "notes",
-        ""
-    ).strip()
+        flash(
+            "Amount si sahihi.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("debts")
+        )
 
     if amount <= 0:
 
         flash(
-            "Weka kiasi halali.",
-            "danger"
+            "Weka amount zaidi ya 0.",
+            "warning"
         )
 
         return redirect(
@@ -2618,101 +3015,107 @@ def pay_debt(debt_id):
 
     conn = get_db()
 
-    try:
-
-        debt = conn.execute(
-            """
-            SELECT *
-            FROM debts
-            WHERE id=?
-              AND user_id=?
-            """,
-            (
-                debt_id,
-                uid
-            )
-        ).fetchone()
-
-        if not debt:
-
-            flash(
-                "Deni halipatikani.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("debts")
-            )
-
-        payment = min(
-            amount,
-            money(debt["balance"])
+    debt = conn.execute(
+        """
+        SELECT *
+        FROM debts
+        WHERE id = ?
+        AND user_id = ?
+        """,
+        (
+            debt_id,
+            user["id"]
         )
+    ).fetchone()
 
-        new_paid = (
-            money(debt["paid"])
-            +
-            payment
-        )
+    if not debt:
 
-        new_balance = max(
-            money(debt["amount"])
-            -
-            new_paid,
-            0
-        )
-
-        status = (
-            "paid"
-            if new_balance <= 0
-            else "partial"
-        )
-
-        conn.execute(
-            """
-            UPDATE debts
-            SET paid=?,
-                balance=?,
-                status=?
-            WHERE id=?
-            """,
-            (
-                new_paid,
-                new_balance,
-                status,
-                debt_id
-            )
-        )
-
-        conn.execute(
-            """
-            INSERT INTO debt_payments
-            (
-                debt_id,
-                user_id,
-                amount,
-                payment_method,
-                notes
-            )
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                debt_id,
-                uid,
-                payment,
-                payment_method,
-                notes
-            )
-        )
-
-        conn.commit()
-
-    finally:
         conn.close()
 
+        flash(
+            "Deni halijapatikana.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("debts")
+        )
+
+    balance = float(
+        debt["balance"] or 0
+    )
+
+    amount = min(
+        amount,
+        balance
+    )
+
+    new_paid = (
+        float(debt["paid"] or 0)
+        + amount
+    )
+
+    new_balance = max(
+        0,
+        balance - amount
+    )
+
+    status = (
+        "Paid"
+        if new_balance <= 0
+        else "Pending"
+    )
+
+    conn.execute(
+        """
+        UPDATE debts
+        SET paid = ?,
+            balance = ?,
+            status = ?
+        WHERE id = ?
+        """,
+        (
+            new_paid,
+            new_balance,
+            status,
+            debt_id
+        )
+    )
+
+    conn.execute(
+        """
+        INSERT INTO debt_payments
+        (
+            debt_id,
+            user_id,
+            amount,
+            payment_method,
+            notes
+        )
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            debt_id,
+            user["id"],
+            amount,
+            request.form.get(
+                "payment_method",
+                "Cash"
+            ),
+            request.form.get(
+                "notes",
+                ""
+            )
+        )
+    )
+
+    conn.commit()
+    conn.close()
+
     log_action(
+        user["id"],
         "DEBT_PAYMENT",
-        f"Malipo ya deni TZS {payment:,.2f}"
+        f"Debt {debt_id}: {amount}"
     )
 
     flash(
@@ -2736,7 +3139,9 @@ def pay_debt(debt_id):
 @login_required
 def expenses():
 
-    uid = session["user_id"]
+    user = get_current_user()
+
+    conn = get_db()
 
     if request.method == "POST":
 
@@ -2750,73 +3155,70 @@ def expenses():
             ""
         ).strip()
 
-        amount = money(
-            request.form.get(
-                "amount",
-                0
-            )
-        )
-
-        payment_method = request.form.get(
-            "payment_method",
-            "Cash"
-        )
-
-        notes = request.form.get(
-            "notes",
+        description = request.form.get(
+            "description",
             ""
         ).strip()
 
+        expense_date = request.form.get(
+            "expense_date",
+            datetime.now().strftime(
+                "%Y-%m-%d"
+            )
+        )
+
+        try:
+
+            amount = float(
+                request.form.get(
+                    "amount",
+                    0
+                ) or 0
+            )
+
+        except Exception:
+
+            amount = 0
+
         if not title or amount <= 0:
 
+            conn.close()
+
             flash(
-                "Jaza jina la expense na kiasi sahihi.",
-                "danger"
+                "Jaza title na amount sahihi.",
+                "warning"
             )
 
             return redirect(
                 url_for("expenses")
             )
 
-        conn = get_db()
-
-        try:
-
-            conn.execute(
-                """
-                INSERT INTO expenses
-                (
-                    user_id,
-                    title,
-                    category,
-                    amount,
-                    payment_method,
-                    notes
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    uid,
-                    title,
-                    category,
-                    amount,
-                    payment_method,
-                    notes
-                )
-            )
-
-            conn.commit()
-
-        finally:
-            conn.close()
-
-        log_action(
-            "EXPENSE_CREATE",
+        conn.execute(
+            """
+            INSERT INTO expenses
             (
-                f"Expense TZS "
-                f"{amount:,.2f}: {title}"
+                user_id,
+                title,
+                category,
+                amount,
+                description,
+                expense_date
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user["id"],
+                title,
+                category,
+                amount,
+                description,
+                expense_date
             )
         )
+
+        conn.commit()
+
+        conn.close()
 
         flash(
             "Expense imehifadhiwa.",
@@ -2827,36 +3229,34 @@ def expenses():
             url_for("expenses")
         )
 
-    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM expenses
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user["id"],)
+    ).fetchall()
 
-    try:
+    total = conn.execute(
+        """
+        SELECT COALESCE(
+            SUM(amount),
+            0
+        )
+        FROM expenses
+        WHERE user_id = ?
+        """,
+        (user["id"],)
+    ).fetchone()[0]
 
-        rows = conn.execute(
-            """
-            SELECT *
-            FROM expenses
-            WHERE user_id=?
-            ORDER BY id DESC
-            """,
-            (uid,)
-        ).fetchall()
-
-        total = conn.execute(
-            """
-            SELECT COALESCE(SUM(amount),0) AS total
-            FROM expenses
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()["total"]
-
-    finally:
-        conn.close()
+    conn.close()
 
     return render_template(
         "expenses.html",
         expenses=rows,
-        total_expenses=money(total)
+        total_expenses=total
     )
 
 
@@ -2868,125 +3268,211 @@ def expenses():
 @login_required
 def reports():
 
-    uid = session["user_id"]
+    user = get_current_user()
 
     conn = get_db()
 
-    try:
+    today = datetime.now().strftime(
+        "%Y-%m-%d"
+    )
 
-        sales = conn.execute(
-            """
-            SELECT
-                COALESCE(SUM(amount),0) AS sales,
-                COALESCE(SUM(debt),0) AS debt,
-                COALESCE(SUM(profit),0) AS profit,
-                COUNT(*) AS receipts
-            FROM receipts
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()
+    month = datetime.now().strftime(
+        "%Y-%m"
+    )
 
-        expenses_total = conn.execute(
-            """
-            SELECT COALESCE(SUM(amount),0) AS total
-            FROM expenses
-            WHERE user_id=?
-            """,
-            (uid,)
-        ).fetchone()["total"]
+    sales_today = conn.execute(
+        """
+        SELECT
+            COALESCE(
+                SUM(amount - discount),
+                0
+            ) AS total,
+            COUNT(*) AS count,
+            COALESCE(
+                SUM(profit),
+                0
+            ) AS profit
+        FROM receipts
+        WHERE user_id = ?
+        AND substr(created_at, 1, 10) = ?
+        """,
+        (
+            user["id"],
+            today
+        )
+    ).fetchone()
 
-        payment_methods = conn.execute(
-            """
-            SELECT
-                payment_method,
-                COALESCE(
-                    SUM(amount-debt),
-                    0
-                ) AS total
-            FROM receipts
-            WHERE user_id=?
-            GROUP BY payment_method
-            ORDER BY total DESC
-            """,
-            (uid,)
-        ).fetchall()
+    sales_month = conn.execute(
+        """
+        SELECT
+            COALESCE(
+                SUM(amount - discount),
+                0
+            ) AS total,
+            COUNT(*) AS count,
+            COALESCE(
+                SUM(profit),
+                0
+            ) AS profit
+        FROM receipts
+        WHERE user_id = ?
+        AND substr(created_at, 1, 7) = ?
+        """,
+        (
+            user["id"],
+            month
+        )
+    ).fetchone()
 
-        daily_sales = conn.execute(
-            """
-            SELECT
-                date(created_at) AS day,
-                COALESCE(SUM(amount),0) AS total
-            FROM receipts
-            WHERE user_id=?
-            GROUP BY date(created_at)
-            ORDER BY day DESC
-            LIMIT 30
-            """,
-            (uid,)
-        ).fetchall()
-
-        top_products = conn.execute(
-            """
-            SELECT
-                service_item,
-                SUM(quantity) AS quantity,
-                SUM(amount) AS total
-            FROM receipts
-            WHERE user_id=?
-            GROUP BY service_item
-            ORDER BY total DESC
-            LIMIT 20
-            """,
-            (uid,)
-        ).fetchall()
-
-        monthly_sales = conn.execute(
-            """
-            SELECT
-                strftime('%Y-%m', created_at)
-                AS month,
-                COALESCE(SUM(amount),0)
-                AS total
-            FROM receipts
-            WHERE user_id=?
-            GROUP BY strftime(
-                '%Y-%m',
-                created_at
+    expenses_month = conn.execute(
+        """
+        SELECT
+            COALESCE(
+                SUM(amount),
+                0
             )
-            ORDER BY month DESC
-            LIMIT 12
-            """,
-            (uid,)
-        ).fetchall()
+        FROM expenses
+        WHERE user_id = ?
+        AND substr(
+            COALESCE(
+                expense_date,
+                created_at
+            ),
+            1,
+            7
+        ) = ?
+        """,
+        (
+            user["id"],
+            month
+        )
+    ).fetchone()[0]
 
-    finally:
-        conn.close()
+    monthly_sales = conn.execute(
+        """
+        SELECT
+            substr(created_at, 1, 10) AS day,
+            COALESCE(
+                SUM(amount - discount),
+                0
+            ) AS total,
+            COALESCE(
+                SUM(profit),
+                0
+            ) AS profit
+        FROM receipts
+        WHERE user_id = ?
+        GROUP BY substr(
+            created_at,
+            1,
+            10
+        )
+        ORDER BY day DESC
+        LIMIT 31
+        """,
+        (user["id"],)
+    ).fetchall()
 
-    stats = {
-        "sales": money(sales["sales"]),
-        "debt": money(sales["debt"]),
-        "profit_before_expenses": money(
-            sales["profit"]
-        ),
-        "expenses": money(
-            expenses_total
-        ),
-        "net_profit": (
-            money(sales["profit"])
-            -
-            money(expenses_total)
-        ),
-        "receipts": sales["receipts"] or 0
+    top_products = conn.execute(
+        """
+        SELECT
+            json_extract(value, '$.name') AS name,
+            SUM(
+                json_extract(value, '$.quantity')
+            ) AS quantity
+        FROM receipts,
+        json_each(receipts.items)
+        WHERE receipts.user_id = ?
+        GROUP BY name
+        ORDER BY quantity DESC
+        LIMIT 10
+        """,
+        (user["id"],)
+    ).fetchall()
+
+    conn.close()
+
+    report_data = {
+        "today_sales": sales_today["total"] or 0,
+        "today_transactions": sales_today["count"] or 0,
+        "today_profit": sales_today["profit"] or 0,
+
+        "month_sales": sales_month["total"] or 0,
+        "month_transactions": sales_month["count"] or 0,
+        "month_profit": sales_month["profit"] or 0,
+
+        "month_expenses": expenses_month or 0,
+
+        "net_month": (
+            float(sales_month["profit"] or 0)
+            - float(expenses_month or 0)
+        )
     }
 
     return render_template(
         "reports.html",
-        stats=stats,
-        payment_methods=payment_methods,
-        daily_sales=daily_sales,
+        stats=report_data,
         monthly_sales=monthly_sales,
         top_products=top_products
+    )
+
+
+# ============================================================
+# RECEIPT
+# ============================================================
+
+@app.route(
+    "/receipt/<int:receipt_id>"
+)
+@login_required
+def receipt(receipt_id):
+
+    user = get_current_user()
+
+    conn = get_db()
+
+    row = conn.execute(
+        """
+        SELECT *
+        FROM receipts
+        WHERE id = ?
+        AND user_id = ?
+        """,
+        (
+            receipt_id,
+            user["id"]
+        )
+    ).fetchone()
+
+    conn.close()
+
+    if not row:
+
+        flash(
+            "Receipt haijapatikana.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("sales")
+        )
+
+    import json
+
+    try:
+
+        items = json.loads(
+            row["items"] or "[]"
+        )
+
+    except Exception:
+
+        items = []
+
+    return render_template(
+        "receipt.html",
+        receipt=row,
+        items=items
     )
 
 
@@ -2995,167 +3481,77 @@ def reports():
 # ============================================================
 
 def send_beem_sms(
-    user_id,
-    recipient,
+    phone,
     message
 ):
 
-    conn = get_db()
+    api_key = get_setting(
+        "beem_api_key",
+        ""
+    )
+
+    secret = get_setting(
+        "beem_secret",
+        ""
+    )
+
+    sender = get_setting(
+        "beem_sender",
+        "Mkolani"
+    )
+
+    phone = normalize_phone(
+        phone
+    )
+
+    if not api_key or not secret:
+
+        return {
+            "success": False,
+            "message": "Beem API credentials hazijawekwa."
+        }
+
+    if not phone:
+
+        return {
+            "success": False,
+            "message": "Namba ya simu si sahihi."
+        }
 
     try:
 
-        user = conn.execute(
-            """
-            SELECT *
-            FROM users
-            WHERE id=?
-            """,
-            (user_id,)
-        ).fetchone()
-
-        if not user:
-            return
-
-        api_key = (
-            user["beem_api_key"]
-            or user["api_key"]
-            or os.environ.get(
-                "BEEM_API_KEY"
-            )
+        response = requests.post(
+            "https://api.beem.africa/v1/send",
+            auth=(
+                api_key,
+                secret
+            ),
+            json={
+                "source_addr": sender,
+                "encoding": 0,
+                "message": message,
+                "recipients": [
+                    {
+                        "recipient_id": 1,
+                        "dest_addr": phone
+                    }
+                ]
+            },
+            timeout=20
         )
 
-        secret_key = (
-            user["beem_secret_key"]
-            or user["secret_key"]
-            or os.environ.get(
-                "BEEM_SECRET_KEY"
-            )
-        )
+        return {
+            "success": response.ok,
+            "status_code": response.status_code,
+            "response": response.text
+        }
 
-        sender_id = (
-            user["beem_sender_id"]
-            or user["sender_id"]
-            or os.environ.get(
-                "BEEM_SENDER_ID",
-                "INFO"
-            )
-        )
+    except Exception as e:
 
-        recipient = normalize_phone(
-            recipient
-        )
-
-        if (
-            not api_key
-            or not secret_key
-            or not recipient
-        ):
-
-            conn.execute(
-                """
-                INSERT INTO sms_logs
-                (
-                    user_id,
-                    recipient,
-                    message,
-                    sender_id,
-                    status
-                )
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    user_id,
-                    recipient,
-                    message,
-                    sender_id,
-                    "not_configured"
-                )
-            )
-
-            conn.commit()
-
-            return
-
-        try:
-
-            response = requests.post(
-                "https://api.beem.africa/v1/send",
-                auth=(
-                    api_key,
-                    secret_key
-                ),
-                json={
-                    "source_addr": sender_id,
-                    "schedule_time": "",
-                    "encoding": "0",
-                    "message": message,
-                    "recipients": [
-                        {
-                            "recipient_id": 1,
-                            "dest_addr": recipient
-                        }
-                    ]
-                },
-                timeout=20
-            )
-
-            status = (
-                "sent"
-                if response.ok
-                else "failed"
-            )
-
-            response_text = response.text[:1000]
-
-        except Exception as exc:
-
-            status = "failed"
-            response_text = str(exc)
-
-        conn.execute(
-            """
-            INSERT INTO sms_logs
-            (
-                user_id,
-                recipient,
-                message,
-                sender_id,
-                status,
-                response
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                user_id,
-                recipient,
-                message,
-                sender_id,
-                status,
-                response_text
-            )
-        )
-
-        conn.commit()
-
-    finally:
-        conn.close()
-
-
-def send_beem_sms_async(
-    user_id,
-    recipient,
-    message
-):
-
-    threading.Thread(
-        target=send_beem_sms,
-        args=(
-            user_id,
-            recipient,
-            message
-        ),
-        daemon=True
-    ).start()
+        return {
+            "success": False,
+            "message": str(e)
+        }
 
 
 @app.route(
@@ -3165,12 +3561,12 @@ def send_beem_sms_async(
 @login_required
 def sms():
 
-    uid = session["user_id"]
+    user = get_current_user()
 
     if request.method == "POST":
 
-        recipient = request.form.get(
-            "recipient",
+        phone = request.form.get(
+            "phone",
             ""
         ).strip()
 
@@ -3179,32 +3575,55 @@ def sms():
             ""
         ).strip()
 
-        if not recipient or not message:
-
-            flash(
-                "Weka namba ya simu na ujumbe.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("sms")
-            )
-
-        send_beem_sms_async(
-            uid,
-            recipient,
+        result = send_beem_sms(
+            phone,
             message
         )
 
-        log_action(
-            "SMS_SEND",
-            f"SMS kwa {recipient}"
+        conn = get_db()
+
+        conn.execute(
+            """
+            INSERT INTO sms_logs
+            (
+                user_id,
+                phone,
+                message,
+                status,
+                response
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                user["id"],
+                phone,
+                message,
+                "SUCCESS"
+                if result.get("success")
+                else "FAILED",
+                str(result)
+            )
         )
 
-        flash(
-            "SMS imepelekwa kwenye huduma ya kutuma.",
-            "success"
-        )
+        conn.commit()
+        conn.close()
+
+        if result.get("success"):
+
+            flash(
+                "SMS imetumwa.",
+                "success"
+            )
+
+        else:
+
+            flash(
+                result.get(
+                    "message",
+                    "SMS imeshindikana."
+                ),
+                "danger"
+            )
 
         return redirect(
             url_for("sms")
@@ -3212,105 +3631,27 @@ def sms():
 
     conn = get_db()
 
-    try:
+    logs = conn.execute(
+        """
+        SELECT *
+        FROM sms_logs
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 100
+        """,
+        (user["id"],)
+    ).fetchall()
 
-        logs = conn.execute(
-            """
-            SELECT *
-            FROM sms_logs
-            WHERE user_id=?
-            ORDER BY id DESC
-            LIMIT 100
-            """,
-            (uid,)
-        ).fetchall()
-
-        sent = conn.execute(
-            """
-            SELECT COUNT(*) AS total
-            FROM sms_logs
-            WHERE user_id=?
-              AND status='sent'
-            """,
-            (uid,)
-        ).fetchone()["total"]
-
-        failed = conn.execute(
-            """
-            SELECT COUNT(*) AS total
-            FROM sms_logs
-            WHERE user_id=?
-              AND status='failed'
-            """,
-            (uid,)
-        ).fetchone()["total"]
-
-    finally:
-        conn.close()
+    conn.close()
 
     return render_template(
         "sms.html",
-        logs=logs,
-        sms_sent=sent,
-        sms_failed=failed
+        sms_logs=logs
     )
 
 
 # ============================================================
-# RECEIPT VIEW
-# ============================================================
-
-@app.route(
-    "/receipt/<int:receipt_id>"
-)
-@login_required
-def receipt_view(receipt_id):
-
-    conn = get_db()
-
-    try:
-
-        receipt = conn.execute(
-            """
-            SELECT
-                receipts.*,
-                users.business_name,
-                users.phone_number,
-                users.logo_path
-            FROM receipts
-            LEFT JOIN users
-                ON receipts.user_id=users.id
-            WHERE receipts.id=?
-              AND receipts.user_id=?
-            """,
-            (
-                receipt_id,
-                session["user_id"]
-            )
-        ).fetchone()
-
-    finally:
-        conn.close()
-
-    if not receipt:
-
-        flash(
-            "Risiti haipatikani.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("sales")
-        )
-
-    return render_template(
-        "receipt_view.html",
-        receipt=receipt
-    )
-
-
-# ============================================================
-# PROFILE / BUSINESS SETTINGS
+# PROFILE / SETTINGS
 # ============================================================
 
 @app.route(
@@ -3324,93 +3665,73 @@ def receipt_view(receipt_id):
 @login_required
 def profile():
 
-    uid = session["user_id"]
+    user = get_current_user()
 
     if request.method == "POST":
 
-        business_name = request.form.get(
-            "business_name",
-            "Mkolani Enterprise"
-        ).strip()
-
-        business_type = request.form.get(
-            "business_type",
-            "RETAIL"
+        name = request.form.get(
+            "name",
+            user["name"] or ""
         ).strip()
 
         phone = request.form.get(
             "phone",
-            request.form.get(
-                "phone_number",
-                ""
-            )
+            user["phone"] or ""
+        ).strip()
+
+        business_name = request.form.get(
+            "business_name",
+            user["business_name"]
+            or "Mkolani Stationery"
         ).strip()
 
         currency = request.form.get(
             "currency",
-            "TZS"
-        ).strip()
-
-        beem_api_key = request.form.get(
-            "beem_api_key",
-            ""
-        ).strip()
-
-        beem_secret_key = request.form.get(
-            "beem_secret_key",
-            ""
-        ).strip()
-
-        beem_sender_id = request.form.get(
-            "beem_sender_id",
-            ""
+            get_setting(
+                "currency",
+                "TZS"
+            )
         ).strip()
 
         conn = get_db()
 
-        try:
-
-            conn.execute(
-                """
-                UPDATE users
-                SET
-                    business_name=?,
-                    business_type=?,
-                    phone_number=?,
-                    currency=?,
-                    beem_api_key=?,
-                    beem_secret_key=?,
-                    beem_sender_id=?
-                WHERE id=?
-                """,
-                (
-                    business_name,
-                    business_type,
-                    phone,
-                    currency,
-                    beem_api_key,
-                    beem_secret_key,
-                    beem_sender_id,
-                    uid
-                )
+        conn.execute(
+            """
+            UPDATE users
+            SET name = ?,
+                phone = ?,
+                business_name = ?
+            WHERE id = ?
+            """,
+            (
+                name,
+                phone,
+                business_name,
+                user["id"]
             )
+        )
 
-            conn.commit()
+        conn.commit()
+        conn.close()
 
-        finally:
-            conn.close()
-
-        session["business_name"] = (
+        set_setting(
+            "business_name",
             business_name
         )
 
+        set_setting(
+            "currency",
+            currency or "TZS"
+        )
+
         log_action(
-            "PROFILE_UPDATE",
-            "Business settings zimebadilishwa."
+            user["id"],
+            "UPDATE_PROFILE",
+            "Profile updated"
         )
 
         flash(
-            "Mipangilio imehifadhiwa.",
+            "Profile imeboreshwa.",
             "success"
         )
 
@@ -3418,810 +3739,543 @@ def profile():
             url_for("profile")
         )
 
-    user = current_user()
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # Old system sometimes rendered user.html here.
+    # We preserve its expected variables so it cannot crash.
+    # --------------------------------------------------------
 
-    # Preserve compatibility with user.html.
-    # If user.html is a dashboard-style template,
-    # give it safe empty dashboard values.
-    empty_stats = {
-        "sales": 0,
-        "paid": 0,
-        "debt": 0,
-        "receipts": 0,
-        "expenses": 0,
-        "profit": 0,
-        "products": 0,
-        "customers": 0,
-        "stock_value": 0
-    }
+    data = get_dashboard_data(
+        user["id"]
+    )
 
     return render_template(
         "user.html",
         user=user,
         current_user=user,
-        stats=empty_stats,
-        sales_stats=empty_stats,
-        recent_sales=[],
-        receipts=[],
-        low_stock=[],
-        notifications=[]
+        profile_mode=True,
+        **data
     )
 
 
 # ============================================================
-# MASTER CONTROL CENTER
+# MASTER / ADMIN
 # ============================================================
 
 @app.route(
     "/master",
     methods=["GET", "POST"]
 )
-@login_required
+@master_required
 def master():
 
-    user = current_user()
+    user = get_current_user()
 
-    if not user:
-        session.clear()
-        return redirect(url_for("index"))
+    conn = get_db()
 
-    if user["role"] != "Master":
+    if request.method == "POST":
 
-        if request.method == "POST":
+        action = request.form.get(
+            "action",
+            ""
+        )
 
-            entered_pin = request.form.get(
-                "pin_input",
+        # ----------------------------------------------------
+        # ADD USER
+        # ----------------------------------------------------
+
+        if action == "add_user":
+
+            name = request.form.get(
+                "name",
+                ""
+            ).strip()
+
+            email = (
+                request.form.get(
+                    "email",
+                    ""
+                )
+                .strip()
+                .lower()
+            )
+
+            password = request.form.get(
+                "password",
                 ""
             )
 
-            if entered_pin == get_setting(
-                "admin_pin",
-                "1234"
-            ):
+            role = request.form.get(
+                "role",
+                "Staff"
+            )
 
-                conn = get_db()
+            phone = request.form.get(
+                "phone",
+                ""
+            ).strip()
 
-                try:
+            if not name or not email or not password:
+
+                flash(
+                    "Jaza taarifa zote muhimu.",
+                    "warning"
+                )
+
+            else:
+
+                existing = conn.execute(
+                    """
+                    SELECT id
+                    FROM users
+                    WHERE lower(email) = ?
+                    """,
+                    (email,)
+                ).fetchone()
+
+                if existing:
+
+                    flash(
+                        "Email tayari ipo.",
+                        "danger"
+                    )
+
+                else:
 
                     conn.execute(
                         """
-                        UPDATE users
-                        SET role='Master',
-                            is_admin=1
-                        WHERE id=?
+                        INSERT INTO users
+                        (
+                            name,
+                            email,
+                            password,
+                            role,
+                            is_admin,
+                            is_active,
+                            business_name,
+                            phone
+                        )
+                        VALUES (?, ?, ?, ?, ?, 1, ?, ?)
                         """,
-                        (user["id"],)
+                        (
+                            name,
+                            email,
+                            generate_password_hash(
+                                password
+                            ),
+                            role,
+                            1 if role == "Master"
+                            else 0,
+                            user["business_name"],
+                            phone
+                        )
                     )
 
                     conn.commit()
 
-                finally:
-                    conn.close()
+                    flash(
+                        "User ameongezwa.",
+                        "success"
+                    )
 
-                session["role"] = "Master"
+        # ----------------------------------------------------
+        # CHANGE ROLE
+        # ----------------------------------------------------
 
-                log_action(
-                    "MASTER_LOGIN",
-                    "Master Control Center imefunguliwa."
+        elif action == "change_role":
+
+            target_id = request.form.get(
+                "user_id"
+            )
+
+            role = request.form.get(
+                "role",
+                "Staff"
+            )
+
+            try:
+
+                target_id = int(
+                    target_id
                 )
 
-                return redirect(
-                    url_for("master")
+                if target_id == user["id"]:
+
+                    flash(
+                        "Huwezi kubadilisha role yako mwenyewe hapa.",
+                        "warning"
+                    )
+
+                else:
+
+                    conn.execute(
+                        """
+                        UPDATE users
+                        SET role = ?,
+                            is_admin = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            role,
+                            1 if role == "Master"
+                            else 0,
+                            target_id
+                        )
+                    )
+
+                    conn.commit()
+
+                    flash(
+                        "Role imebadilishwa.",
+                        "success"
+                    )
+
+            except Exception:
+
+                flash(
+                    "User ID si sahihi.",
+                    "danger"
                 )
+
+        # ----------------------------------------------------
+        # TOGGLE USER
+        # ----------------------------------------------------
+
+        elif action == "toggle_user":
+
+            target_id = request.form.get(
+                "user_id"
+            )
+
+            try:
+
+                target_id = int(
+                    target_id
+                )
+
+                if target_id == user["id"]:
+
+                    flash(
+                        "Huwezi kujizima mwenyewe.",
+                        "warning"
+                    )
+
+                else:
+
+                    conn.execute(
+                        """
+                        UPDATE users
+                        SET is_active =
+                            CASE
+                                WHEN is_active = 1
+                                THEN 0
+                                ELSE 1
+                            END
+                        WHERE id = ?
+                        """,
+                        (target_id,)
+                    )
+
+                    conn.commit()
+
+                    flash(
+                        "Status ya user imebadilishwa.",
+                        "success"
+                    )
+
+            except Exception:
+
+                flash(
+                    "Hitilafu.",
+                    "danger"
+                )
+
+        # ----------------------------------------------------
+        # DELETE USER
+        # ----------------------------------------------------
+
+        elif action == "delete_user":
+
+            target_id = request.form.get(
+                "user_id"
+            )
+
+            try:
+
+                target_id = int(
+                    target_id
+                )
+
+                if target_id == user["id"]:
+
+                    flash(
+                        "Huwezi kujifuta mwenyewe.",
+                        "warning"
+                    )
+
+                else:
+
+                    conn.execute(
+                        """
+                        DELETE FROM users
+                        WHERE id = ?
+                        """,
+                        (target_id,)
+                    )
+
+                    conn.commit()
+
+                    flash(
+                        "User amefutwa.",
+                        "success"
+                    )
+
+            except Exception:
+
+                flash(
+                    "Hitilafu wakati wa kufuta user.",
+                    "danger"
+                )
+
+        # ----------------------------------------------------
+        # SYSTEM SETTINGS
+        # ----------------------------------------------------
+
+        elif action == "settings":
+
+            app_name = request.form.get(
+                "app_name",
+                "Mkolani POS"
+            ).strip()
+
+            business_name = request.form.get(
+                "business_name",
+                "Mkolani Stationery"
+            ).strip()
+
+            currency = request.form.get(
+                "currency",
+                "TZS"
+            ).strip()
+
+            low_stock_limit = request.form.get(
+                "low_stock_limit",
+                "5"
+            ).strip()
+
+            beem_api_key = request.form.get(
+                "beem_api_key",
+                ""
+            ).strip()
+
+            beem_secret = request.form.get(
+                "beem_secret",
+                ""
+            ).strip()
+
+            beem_sender = request.form.get(
+                "beem_sender",
+                "Mkolani"
+            ).strip()
+
+            set_setting(
+                "app_name",
+                app_name
+            )
+
+            set_setting(
+                "business_name",
+                business_name
+            )
+
+            set_setting(
+                "currency",
+                currency
+            )
+
+            set_setting(
+                "low_stock_limit",
+                low_stock_limit
+            )
+
+            set_setting(
+                "beem_api_key",
+                beem_api_key
+            )
+
+            set_setting(
+                "beem_secret",
+                beem_secret
+            )
+
+            set_setting(
+                "beem_sender",
+                beem_sender
+            )
 
             flash(
-                "Master PIN si sahihi.",
-                "danger"
+                "System settings zimehifadhiwa.",
+                "success"
             )
 
-            return redirect(
-                url_for("dashboard")
-            )
+        # ----------------------------------------------------
+        # MASTER PIN
+        # ----------------------------------------------------
 
-        return render_template(
-            "admin_lock.html"
-        )
+        elif action == "master_pin":
 
-    conn = get_db()
+            pin = request.form.get(
+                "master_pin",
+                ""
+            ).strip()
 
-    try:
+            if len(pin) < 4:
 
-        total_users = conn.execute(
-            "SELECT COUNT(*) total FROM users"
-        ).fetchone()["total"]
+                flash(
+                    "Master PIN iwe angalau digits 4.",
+                    "warning"
+                )
 
-        active_users = conn.execute(
-            """
-            SELECT COUNT(*) total
-            FROM users
-            WHERE status='active'
-            """
-        ).fetchone()["total"]
+            else:
 
-        total_sales = conn.execute(
-            """
-            SELECT COALESCE(SUM(amount),0) total
-            FROM receipts
-            """
-        ).fetchone()["total"]
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET master_pin = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        pin,
+                        user["id"]
+                    )
+                )
 
-        total_debt = conn.execute(
-            """
-            SELECT COALESCE(SUM(balance),0) total
-            FROM debts
-            WHERE balance>0
-            """
-        ).fetchone()["total"]
+                conn.commit()
 
-        total_expenses = conn.execute(
-            """
-            SELECT COALESCE(SUM(amount),0) total
-            FROM expenses
-            """
-        ).fetchone()["total"]
+                flash(
+                    "Master PIN imebadilishwa.",
+                    "success"
+                )
 
-        total_profit = conn.execute(
-            """
-            SELECT COALESCE(SUM(profit),0) total
-            FROM receipts
-            """
-        ).fetchone()["total"]
+    users = conn.execute(
+        """
+        SELECT
+            id,
+            name,
+            email,
+            role,
+            is_admin,
+            is_active,
+            business_name,
+            phone,
+            created_at
+        FROM users
+        ORDER BY id ASC
+        """
+    ).fetchall()
 
-        total_products = conn.execute(
-            """
-            SELECT COUNT(*) total
-            FROM products
-            """
-        ).fetchone()["total"]
-
-        total_customers = conn.execute(
-            """
-            SELECT COUNT(*) total
-            FROM customers
-            """
-        ).fetchone()["total"]
-
-        total_sms = conn.execute(
-            """
-            SELECT COUNT(*) total
-            FROM sms_logs
-            WHERE status='sent'
-            """
-        ).fetchone()["total"]
-
-        stock_value = conn.execute(
-            """
-            SELECT
-                COALESCE(
-                    SUM(
-                        quantity * buying_price
-                    ),
-                    0
-                ) total
-            FROM products
-            """
-        ).fetchone()["total"]
-
-        users = conn.execute(
-            """
-            SELECT
-                id,
-                email,
-                business_name,
-                phone_number,
-                role,
-                status,
-                is_admin,
-                created_at,
-                last_login
-            FROM users
-            ORDER BY id DESC
-            """
-        ).fetchall()
-
-        recent_sales = conn.execute(
-            """
-            SELECT
-                receipts.*,
-                users.email,
-                users.business_name
-            FROM receipts
-            LEFT JOIN users
-                ON receipts.user_id=users.id
-            ORDER BY receipts.id DESC
-            LIMIT 50
-            """
-        ).fetchall()
-
-        audit_logs = conn.execute(
-            """
-            SELECT
-                audit_logs.*,
-                users.email
-            FROM audit_logs
-            LEFT JOIN users
-                ON audit_logs.user_id=users.id
-            ORDER BY audit_logs.id DESC
-            LIMIT 100
-            """
-        ).fetchall()
-
-    finally:
-        conn.close()
-
-    stats = {
-        "users": total_users,
-        "active_users": active_users,
-        "sales": money(total_sales),
-        "debt": money(total_debt),
-        "expenses": money(total_expenses),
-        "profit": (
-            money(total_profit)
-            -
-            money(total_expenses)
+    settings = {
+        "app_name": get_setting(
+            "app_name",
+            "Mkolani POS"
         ),
-        "products": total_products,
-        "customers": total_customers,
-        "sms": total_sms,
-        "stock_value": money(stock_value)
+        "business_name": get_setting(
+            "business_name",
+            "Mkolani Stationery"
+        ),
+        "currency": get_setting(
+            "currency",
+            "TZS"
+        ),
+        "low_stock_limit": get_setting(
+            "low_stock_limit",
+            "5"
+        ),
+        "beem_api_key": get_setting(
+            "beem_api_key",
+            ""
+        ),
+        "beem_secret": get_setting(
+            "beem_secret",
+            ""
+        ),
+        "beem_sender": get_setting(
+            "beem_sender",
+            "Mkolani"
+        )
     }
 
+    conn.close()
+
     return render_template(
-        "admin_dashboard.html",
-        stats=stats,
+        "master.html",
         users=users,
-        receipts=recent_sales,
-        audit_logs=audit_logs
+        settings=settings
     )
 
 
 # ============================================================
-# ADMIN ALIAS
+# ADMIN COMPATIBILITY
 # ============================================================
 
-@app.route(
-    "/admin",
-    methods=["GET", "POST"]
-)
+@app.route("/admin")
 @login_required
-def admin_dashboard():
+def admin():
+
+    user = get_current_user()
+
+    if (
+        user["role"] != "Master"
+        and not user["is_admin"]
+    ):
+
+        flash(
+            "Huna ruhusa.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("dashboard")
+        )
 
     return master()
 
 
 # ============================================================
-# MASTER - ADD USER
+# NOTIFICATIONS
 # ============================================================
 
 @app.route(
-    "/master/users/add",
-    methods=["POST"]
+    "/notifications/read",
+    methods=["POST", "GET"]
 )
-@master_required
-def master_add_user():
+@login_required
+def mark_notifications_read():
 
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    password = request.form.get(
-        "password",
-        ""
-    )
-
-    business_name = request.form.get(
-        "business_name",
-        "Mkolani Enterprise"
-    ).strip()
-
-    phone = request.form.get(
-        "phone",
-        ""
-    ).strip()
-
-    role = request.form.get(
-        "role",
-        "Staff"
-    )
-
-    if role not in [
-        "Admin",
-        "Manager",
-        "Staff"
-    ]:
-        role = "Staff"
-
-    if not email or len(password) < 6:
-
-        flash(
-            "Email na password ya angalau "
-            "characters 6 vinahitajika.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("master")
-        )
+    user = get_current_user()
 
     conn = get_db()
 
-    try:
-
-        exists = conn.execute(
-            """
-            SELECT id
-            FROM users
-            WHERE lower(email)=?
-            """,
-            (email,)
-        ).fetchone()
-
-        if exists:
-
-            flash(
-                "Email hii tayari ipo.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("master")
-            )
-
-        conn.execute(
-            """
-            INSERT INTO users
-            (
-                email,
-                password,
-                business_name,
-                phone_number,
-                role,
-                is_admin,
-                status,
-                created_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                email,
-                generate_password_hash(
-                    password
-                ),
-                business_name,
-                phone,
-                role,
-                1 if role == "Admin" else 0,
-                "active",
-                datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-            )
-        )
-
-        conn.commit()
-
-    finally:
-        conn.close()
-
-    log_action(
-        "USER_CREATE",
-        (
-            f"Master ameongeza user "
-            f"{email} ({role})."
-        )
+    conn.execute(
+        """
+        UPDATE notifications
+        SET is_read = 1
+        WHERE user_id = ?
+        """,
+        (user["id"],)
     )
 
-    flash(
-        "User ameongezwa kikamilifu.",
-        "success"
-    )
+    conn.commit()
+    conn.close()
+
+    if request.is_json:
+
+        return jsonify({
+            "success": True
+        })
 
     return redirect(
-        url_for("master")
-    )
-
-
-# ============================================================
-# MASTER - CHANGE ROLE
-# ============================================================
-
-@app.route(
-    "/master/users/<int:user_id>/role",
-    methods=["POST"]
-)
-@master_required
-def change_user_role(user_id):
-
-    role = request.form.get(
-        "role",
-        "Staff"
-    )
-
-    if role not in [
-        "Admin",
-        "Manager",
-        "Staff"
-    ]:
-        role = "Staff"
-
-    conn = get_db()
-
-    try:
-
-        target = conn.execute(
-            """
-            SELECT *
-            FROM users
-            WHERE id=?
-            """,
-            (user_id,)
-        ).fetchone()
-
-        if not target:
-
-            flash(
-                "User hajapatikana.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("master")
-            )
-
-        if target["role"] == "Master":
-
-            flash(
-                "Master account inalindwa.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("master")
-            )
-
-        conn.execute(
-            """
-            UPDATE users
-            SET role=?,
-                is_admin=?
-            WHERE id=?
-            """,
-            (
-                role,
-                1 if role == "Admin" else 0,
-                user_id
-            )
-        )
-
-        conn.commit()
-
-    finally:
-        conn.close()
-
-    log_action(
-        "ROLE_CHANGE",
-        (
-            f"User {user_id} "
-            f"amepewa role {role}."
-        )
-    )
-
-    flash(
-        "Role imebadilishwa.",
-        "success"
-    )
-
-    return redirect(
-        url_for("master")
-    )
-
-
-# ============================================================
-# MASTER - TOGGLE USER STATUS
-# ============================================================
-
-@app.route(
-    "/master/users/<int:user_id>/status",
-    methods=["POST"]
-)
-@master_required
-def toggle_user_status(user_id):
-
-    conn = get_db()
-
-    try:
-
-        target = conn.execute(
-            """
-            SELECT *
-            FROM users
-            WHERE id=?
-            """,
-            (user_id,)
-        ).fetchone()
-
-        if not target:
-
-            flash(
-                "User hajapatikana.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("master")
-            )
-
-        if target["role"] == "Master":
-
-            flash(
-                "Master account haiwezi kuzimwa.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("master")
-            )
-
-        new_status = (
-            "disabled"
-            if target["status"] == "active"
-            else "active"
-        )
-
-        conn.execute(
-            """
-            UPDATE users
-            SET status=?
-            WHERE id=?
-            """,
-            (
-                new_status,
-                user_id
-            )
-        )
-
-        conn.commit()
-
-    finally:
-        conn.close()
-
-    log_action(
-        "USER_STATUS",
-        (
-            f"User {user_id} "
-            f"status={new_status}"
-        )
-    )
-
-    flash(
-        f"User sasa ni {new_status}.",
-        "success"
-    )
-
-    return redirect(
-        url_for("master")
-    )
-
-
-# ============================================================
-# MASTER - DELETE USER
-# ============================================================
-
-@app.route(
-    "/master/users/<int:user_id>/delete",
-    methods=["POST"]
-)
-@master_required
-def delete_user(user_id):
-
-    if user_id == session["user_id"]:
-
-        flash(
-            "Huwezi kujifuta mwenyewe.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("master")
-        )
-
-    conn = get_db()
-
-    try:
-
-        target = conn.execute(
-            """
-            SELECT *
-            FROM users
-            WHERE id=?
-            """,
-            (user_id,)
-        ).fetchone()
-
-        if not target:
-
-            flash(
-                "User hajapatikana.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("master")
-            )
-
-        if target["role"] == "Master":
-
-            flash(
-                "Master account inalindwa.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("master")
-            )
-
-        # Preserve business records
-        for table in [
-            "receipts",
-            "products",
-            "customers",
-            "debts",
-            "debt_payments",
-            "expenses",
-            "sms_logs",
-            "notifications"
-        ]:
-
-            if column_exists(
-                conn,
-                table,
-                "user_id"
-            ):
-
-                conn.execute(
-                    f"""
-                    UPDATE {table}
-                    SET user_id=NULL
-                    WHERE user_id=?
-                    """,
-                    (user_id,)
-                )
-
-        conn.execute(
-            """
-            DELETE FROM users
-            WHERE id=?
-            """,
-            (user_id,)
-        )
-
-        conn.commit()
-
-    finally:
-        conn.close()
-
-    log_action(
-        "USER_DELETE",
-        (
-            f"User {target['email']} "
-            "amefutwa; records zimehifadhiwa."
-        )
-    )
-
-    flash(
-        "User amefutwa; records zake zimehifadhiwa.",
-        "success"
-    )
-
-    return redirect(
-        url_for("master")
-    )
-
-
-# ============================================================
-# MASTER PIN
-# ============================================================
-
-@app.route(
-    "/master/pin",
-    methods=["POST"]
-)
-@master_required
-def update_master_pin():
-
-    new_pin = request.form.get(
-        "new_pin",
-        ""
-    ).strip()
-
-    if (
-        not new_pin.isdigit()
-        or len(new_pin) < 4
-    ):
-
-        flash(
-            "PIN iwe na tarakimu angalau 4.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("master")
-        )
-
-    set_setting(
-        "admin_pin",
-        new_pin
-    )
-
-    log_action(
-        "MASTER_PIN_CHANGE",
-        "Master PIN imebadilishwa."
-    )
-
-    flash(
-        "Master PIN imebadilishwa.",
-        "success"
-    )
-
-    return redirect(
-        url_for("master")
-    )
-
-
-# ============================================================
-# MASTER SETTINGS
-# ============================================================
-
-@app.route(
-    "/master/settings",
-    methods=["POST"]
-)
-@master_required
-def master_settings():
-
-    app_name = request.form.get(
-        "app_name",
-        "Mkolani POS"
-    ).strip() or "Mkolani POS"
-
-    company_name = request.form.get(
-        "company_name",
-        "Mkolani Enterprise"
-    ).strip() or "Mkolani Enterprise"
-
-    currency = request.form.get(
-        "currency",
-        "TZS"
-    ).strip() or "TZS"
-
-    set_setting(
-        "app_name",
-        app_name
-    )
-
-    set_setting(
-        "company_name",
-        company_name
-    )
-
-    set_setting(
-        "currency",
-        currency
-    )
-
-    log_action(
-        "SYSTEM_SETTINGS",
-        "Master amebadilisha system settings."
-    )
-
-    flash(
-        "System settings zimehifadhiwa.",
-        "success"
-    )
-
-    return redirect(
-        url_for("master")
+        url_for("dashboard")
     )
 
 
@@ -4232,20 +4286,25 @@ def master_settings():
 @app.route("/logout")
 def logout():
 
-    user_id = session.get(
-        "user_id"
-    )
+    user = get_current_user()
 
-    if user_id:
+    if user:
+
         log_action(
+            user["id"],
             "LOGOUT",
-            "User ametoka kwenye mfumo."
+            "User logged out"
         )
 
     session.clear()
 
+    flash(
+        "Umetoka kwenye mfumo.",
+        "info"
+    )
+
     return redirect(
-        url_for("index")
+        url_for("login")
     )
 
 
@@ -4260,149 +4319,196 @@ def health():
 
         conn = get_db()
 
-        try:
-            conn.execute(
-                "SELECT 1"
-            ).fetchone()
-        finally:
-            conn.close()
+        conn.execute(
+            "SELECT 1"
+        ).fetchone()
+
+        conn.close()
 
         return jsonify({
             "status": "ok",
-            "app": "Mkolani POS"
+            "app": "Mkolani POS",
+            "database": "connected",
+            "time": datetime.now().isoformat()
         })
 
-    except Exception as exc:
-
-        print(
-            "HEALTH ERROR:",
-            exc
-        )
+    except Exception as e:
 
         return jsonify({
             "status": "error",
-            "message": str(exc)
+            "database": "failed",
+            "error": str(e)
         }), 500
 
 
+@app.route("/api/health")
+def api_health():
+
+    return health()
+
+
 # ============================================================
-# 404
+# STATIC FILE SAFETY
+# ============================================================
+
+@app.after_request
+def add_security_headers(response):
+
+    response.headers[
+        "X-Content-Type-Options"
+    ] = "nosniff"
+
+    response.headers[
+        "X-Frame-Options"
+    ] = "SAMEORIGIN"
+
+    response.headers[
+        "X-XSS-Protection"
+    ] = "1; mode=block"
+
+    return response
+
+
+# ============================================================
+# ERROR HANDLERS
 # ============================================================
 
 @app.errorhandler(404)
 def page_not_found(error):
 
-    if session.get("user_id"):
+    # IMPORTANT:
+    # Never redirect missing static assets to login.
+    # This prevents CSS/JS from receiving HTTP 302.
 
-        flash(
-            "Ukurasa huo haujapatikana.",
-            "warning"
-        )
+    if request.path.startswith(
+        "/static/"
+    ):
 
-        return redirect(
-            url_for("dashboard")
-        )
+        return jsonify({
+            "error": "Static file not found",
+            "path": request.path
+        }), 404
+
+    if request.path.startswith(
+        "/api/"
+    ):
+
+        return jsonify({
+            "error": "Endpoint not found",
+            "path": request.path
+        }), 404
+
+    user = get_current_user()
+
+    if user:
+
+        try:
+
+            return render_template(
+                "404.html"
+            ), 404
+
+        except Exception:
+
+            return (
+                "404 - Page Not Found",
+                404
+            )
 
     return redirect(
-        url_for("index")
+        url_for("login")
     )
 
 
-# ============================================================
-# 500
-# ============================================================
+@app.errorhandler(405)
+def method_not_allowed(error):
+
+    if request.path.startswith(
+        "/api/"
+    ):
+
+        return jsonify({
+            "error": "Method Not Allowed",
+            "path": request.path
+        }), 405
+
+    return (
+        "Method Not Allowed",
+        405
+    )
+
 
 @app.errorhandler(500)
-def server_error(error):
+def internal_server_error(error):
 
-    print(
-        "SERVER ERROR:",
-        error
+    try:
+
+        app.logger.exception(
+            "Internal server error"
+        )
+
+    except Exception:
+        pass
+
+    if request.path.startswith(
+        "/api/"
+    ):
+
+        return jsonify({
+            "error": "Internal server error"
+        }), 500
+
+    user = get_current_user()
+
+    if user:
+
+        try:
+
+            return render_template(
+                "500.html"
+            ), 500
+
+        except Exception:
+
+            return (
+                "500 - Internal Server Error",
+                500
+            )
+
+    return redirect(
+        url_for("login")
     )
-
-    return """
-    <!DOCTYPE html>
-    <html lang="sw">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport"
-              content="width=device-width, initial-scale=1.0">
-        <title>Mkolani POS - Server Error</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                background: #f5f7fb;
-                margin: 0;
-                padding: 40px 20px;
-            }
-
-            .error-box {
-                max-width: 700px;
-                margin: 60px auto;
-                background: white;
-                padding: 35px;
-                text-align: center;
-                border-radius: 16px;
-                box-shadow: 0 10px 35px rgba(0,0,0,.08);
-            }
-
-            h1 {
-                margin-bottom: 10px;
-            }
-
-            h2 {
-                color: #dc3545;
-            }
-
-            a {
-                display: inline-block;
-                margin-top: 20px;
-                padding: 12px 20px;
-                background: #0d6efd;
-                color: white;
-                text-decoration: none;
-                border-radius: 8px;
-            }
-        </style>
-    </head>
-
-    <body>
-
-        <div class="error-box">
-
-            <h1>Mkolani POS</h1>
-
-            <h2>Server Error</h2>
-
-            <p>
-                Kuna tatizo kwenye server.
-                Angalia Render Logs kwa error ya ziada.
-            </p>
-
-            <a href="/">
-                Rudi Login
-            </a>
-
-        </div>
-
-    </body>
-    </html>
-    """, 500
 
 
 # ============================================================
-# LOCAL DEVELOPMENT
+# CLI / DATABASE INITIALIZATION
+# ============================================================
+
+@app.cli.command("init-db")
+def init_db_command():
+
+    init_db()
+
+    print(
+        "Mkolani POS database initialized."
+    )
+
+
+# ============================================================
+# APPLICATION START
 # ============================================================
 
 if __name__ == "__main__":
 
+    port = int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
+
     app.run(
         host="0.0.0.0",
-        port=int(
-            os.environ.get(
-                "PORT",
-                5000
-            )
-        ),
+        port=port,
         debug=False
     )
