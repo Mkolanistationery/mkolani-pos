@@ -39,7 +39,7 @@
 
     {% if current_user.is_authenticated %}
     <!-- ========================================================= -->
-    <!-- A. DASHBOARD YA NDANI (KODI ZETU ZA NDANI ZILIZO SAHIHI)   -->
+    <!-- A. DASHBOARD YA NDANI                                      -->
     <!-- ========================================================= -->
 
     <!-- SIDEBAR LEFT -->
@@ -138,7 +138,7 @@
 
     {% else %}
     <!-- ========================================================= -->
-    <!-- B. PUBLIC PORTAL (KABLA YA LOG IN - MTINDO WA e-RITA)      -->
+    <!-- B. PUBLIC PORTAL (KABLA YA LOG IN)                        -->
     <!-- ========================================================= -->
 
     <!-- TOP PUBLIC HEADER -->
@@ -225,7 +225,10 @@
                                     <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Neno la Siri (Password)</label>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label small fw-semibold mb-0">Neno la Siri (Password)</label>
+                                        <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none small">Umesahau Password?</a>
+                                    </div>
                                     <input type="password" name="password" class="form-control" placeholder="••••••••" required>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">INGIA KWENYE MFUMO</button>
@@ -333,6 +336,38 @@
         <a href="https://wa.me/255625567603?text=Habari%20Mkolani%20POS,%20naomba%20msaada%20kuhusu%20mfumo" target="_blank" class="whatsapp-btn">
             <i class="bi bi-whatsapp fs-5"></i> <span>Msaada WhatsApp</span>
         </a>
+
+        <!-- FORGOT PASSWORD MODAL -->
+        <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-dark" id="forgotPasswordModalLabel">
+                            <i class="bi bi-key-fill text-warning me-2"></i>Badilisha Neno la Siri
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3">Ingiza barua pepe yako uliyosajilia ili kupata maelekezo ya kuweka upya neno lako la siri, au wasiliana nasi moja kwa moja kupitia WhatsApp.</p>
+                        
+                        <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Ombi lako limepokelewa. Wasiliana nasi WhatsApp kwa msaada wa haraka.');">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Barua Pepe (Email)</label>
+                                <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">TUMA MAELEKEZO</button>
+                        </form>
+
+                        <div class="text-center pt-2 border-top">
+                            <small class="text-muted">Unahitaji msaada wa haraka?</small><br>
+                            <a href="https://wa.me/255625567603?text=Habari%20Mkolani%20POS,%20nimesahau%20password%20yangu" target="_blank" class="text-success fw-bold text-decoration-none small">
+                                <i class="bi bi-whatsapp me-1"></i> Wasiliana na Msaada WhatsApp (+255 625 567 603)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- PUBLIC FOOTER -->
         <footer class="bg-dark text-white pt-5 pb-3">
