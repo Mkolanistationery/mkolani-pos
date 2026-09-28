@@ -12,12 +12,34 @@
     
     <!-- CSS Yako ya Mfumo -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    
+    <style>
+        html { scroll-behavior: smooth; }
+        .fs-7 { font-size: 0.8rem; }
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1050;
+            background-color: #25d366;
+            color: white;
+            border-radius: 50px;
+            padding: 10px 20px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .whatsapp-btn:hover { color: white; background-color: #128c7e; }
+    </style>
 </head>
 <body>
 
     {% if current_user.is_authenticated %}
     <!-- ========================================================= -->
-    <!-- A. DASHBOARD YA NDANI (KODI ZETU ZA JANA ZILIZO SAHIHI) -->
+    <!-- A. DASHBOARD YA NDANI (KODI ZETU ZA NDANI ZILIZO SAHIHI)   -->
     <!-- ========================================================= -->
 
     <!-- SIDEBAR LEFT -->
@@ -122,7 +144,9 @@
     <!-- TOP PUBLIC HEADER -->
     <div class="bg-dark text-white py-1 px-3 fs-7">
         <div class="container d-flex justify-content-between align-items-center">
-            <small><i class="bi bi-telephone-fill me-1 text-warning"></i> Hotline: +255 700 000 000 | Mwanza, Tanzania</small>
+            <small>
+                <i class="bi bi-telephone-fill me-1 text-warning"></i> Hotline/WhatsApp: <a href="https://wa.me/255625567603" target="_blank" class="text-white text-decoration-none fw-bold">+255 625 567 603</a> | Mkolani, Mwanza, Tanzania
+            </small>
             <small>🇹🇿 Swahili | 🇬🇧 English</small>
         </div>
     </div>
@@ -138,7 +162,7 @@
             </button>
             <div class="collapse navbar-collapse" id="publicNav">
                 <ul class="navbar-nav me-auto ms-lg-4 mb-2 mb-lg-0 fw-semibold">
-                    <li class="nav-item"><a class="nav-link active" href="/">Nyumbani</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="#">Nyumbani</a></li>
                     <li class="nav-item"><a class="nav-link" href="#services">Huduma Zetu</a></li>
                     <li class="nav-item"><a class="nav-link" href="#tracker">Fuatilia Risiti</a></li>
                     <li class="nav-item"><a class="nav-link" href="#faq">Msaada & FAQ</a></li>
@@ -170,7 +194,7 @@
             <div class="container">
                 <div class="row align-items-center g-4">
                     <div class="col-lg-7">
-                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Rasmi Kwasababu Ya Biashara Yako</span>
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Rasmi Kwa Ajili Ya Biashara Yako</span>
                         <h1 class="display-5 fw-bold text-dark mb-3">Mfumo wa Kisasa wa Usimamizi wa Mauzo, Stoko na Wateja</h1>
                         <p class="lead text-muted mb-4">Simamia duka lako, ongeza mauzo, tuma SMS za matangazo kwa wateja, na ufuatilie madeni yako kwa usalama wa 100% mtandaoni.</p>
                         <div class="d-flex flex-wrap gap-3 mb-4">
@@ -224,26 +248,91 @@
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
                             <div class="text-primary fs-1 mb-3"><i class="bi bi-cart-check"></i></div>
                             <h5 class="fw-bold text-dark">Mauzo ya Papo hapo (POS)</h5>
-                            <p class="text-muted small">Uza bidhaa kwa haraka, kotoa risiti za digitali, na unganisha na mashine za risiti au printer za kawaida.</p>
+                            <p class="text-muted small mb-0">Uza bidhaa kwa haraka, kotoa risiti za digitali, na unganisha na mashine za risiti au printer za kawaida.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
                             <div class="text-warning fs-1 mb-3"><i class="bi bi-chat-dots"></i></div>
                             <h5 class="fw-bold text-dark">SMS Center & CRM</h5>
-                            <p class="text-muted small">Tuma SMS za matangazo kwa wateja wote au kumbusha madeni kwa kubonyeza kitufe kimoja tu.</p>
+                            <p class="text-muted small mb-0">Tuma SMS za matangazo kwa wateja wote au kumbusha madeni kwa kubonyeza kitufe kimoja tu.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
                             <div class="text-success fs-1 mb-3"><i class="bi bi-boxes"></i></div>
                             <h5 class="fw-bold text-dark">Usimamizi wa Stoko</h5>
-                            <p class="text-muted small">Pata taarifa za bidhaa zinazoisha, fuatilia faida, na udhibiti wafanyakazi wako bila wizi.</p>
+                            <p class="text-muted small mb-0">Pata taarifa za bidhaa zinazoisha, fuatilia faida, na udhibiti wafanyakazi wako bila wizi.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
+
+        <!-- RECEIPT TRACKER SECTION -->
+        <section id="tracker" class="py-5 bg-light border-top border-bottom">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 text-center">
+                        <h3 class="fw-bold text-dark mb-2"><i class="bi bi-search text-primary me-2"></i>Fuatilia Risiti au Ombi la Mteja</h3>
+                        <p class="text-muted small mb-4">Ingiza namba yako ya risiti au ya ombi hapa chini ili kuhakiki na kuangalia hali yake.</p>
+                        <form class="row g-2 justify-content-center" onsubmit="event.preventDefault(); alert('Mfumo unahakiki namba yako ya risiti...');">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Mfano: MKL-2026-98765" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">Hakiki Risiti</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ SECTION -->
+        <section id="faq" class="py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h6 class="text-primary text-uppercase fw-bold">Msaada & Maswali</h6>
+                    <h2 class="fw-bold text-dark">Maswali Yanayoulizwa Mara kwa Mara (FAQ)</h2>
+                </div>
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="accordion shadow-sm rounded-3 overflow-hidden" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        1. Mkolani POS inafanya kazi kwenye kifaa gani?
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        Inafanya kazi kwenye kifaa chochote chenye intaneti—simu ya mkononi, tablet, au kompyuta yoyote.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        2. Nawezaje kutuma SMS kwa wateja wangu?
+                                    </button>
+                                </h2>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        Baada ya kuingia kwenye mfumo, nenda kwenye sehemu ya **SMS Center**, chagua wateja au ingiza jumbe na utume papo hapo.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- WHATSAPP FLOATING BUTTON -->
+        <a href="https://wa.me/255625567603?text=Habari%20Mkolani%20POS,%20naomba%20msaada%20kuhusu%20mfumo" target="_blank" class="whatsapp-btn">
+            <i class="bi bi-whatsapp fs-5"></i> <span>Msaada WhatsApp</span>
+        </a>
 
         <!-- PUBLIC FOOTER -->
         <footer class="bg-dark text-white pt-5 pb-3">
@@ -256,11 +345,12 @@
                     <div class="col-md-4">
                         <h6 class="fw-bold mb-3">Mawasiliano Mwanza</h6>
                         <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-2"></i>Mkolani, Mwanza, Tanzania</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-telephone me-2"></i>+255 625 567 603</p>
                         <p class="text-muted small mb-1"><i class="bi bi-envelope me-2"></i>info@mkolanipos.co.tz</p>
                     </div>
                     <div class="col-md-4">
                         <h6 class="fw-bold mb-3">Njia za Malipo</h6>
-                        <div class="d-flex gap-2 text-muted">
+                        <div class="d-flex gap-2 text-muted flex-wrap">
                             <span class="badge bg-secondary">M-PESA</span>
                             <span class="badge bg-secondary">TIGO PESA</span>
                             <span class="badge bg-secondary">CRDB / NMB</span>
