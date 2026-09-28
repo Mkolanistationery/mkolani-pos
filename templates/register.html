@@ -1,11 +1,66 @@
-{% extends "base.html" %}{% block title %}Register | Mkolani POS{% endblock %}{% block content %}
-<div class="auth-wrap"><div class="auth-card wide"><h2><i class="bi bi-building-add"></i> Fungua Business Account</h2>
-{% if error %}<div class="alert alert-danger">{{error}}</div>{% endif %}
-<form method="post" class="row g-3"><div class="col-md-6"><label>Email</label><input class="form-control" name="email" type="email" required></div>
-<div class="col-md-6"><label>Namba ya simu</label><input class="form-control" name="phone_number" required></div>
-<div class="col-md-6"><label>Business Name</label><input class="form-control" name="business_name" value="Mkolani Enterprise" required></div>
-<div class="col-md-6"><label>Business Type</label><select class="form-select" name="business_type"><option value="retail">Retail</option><option value="services">Services</option><option value="restaurant">Restaurant</option><option value="wholesale">Wholesale</option><option value="other">Other</option></select></div>
-<div class="col-md-6"><label>Password</label><input class="form-control" name="password" type="password" minlength="6" required></div>
-<div class="col-md-6"><label>Confirm Password</label><input class="form-control" name="confirm_password" type="password" minlength="6" required></div>
-<div class="col-md-6"><label>Currency</label><input class="form-control" name="currency" value="TZS"></div>
-<div class="col-12"><button class="btn btn-primary">Create Account</button> <a class="btn btn-light" href="{{url_for('login')}}">Login</a></div></form></div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Sajili Biashara Yako | Mkolani POS{% endblock %}
+
+{% block public_content %}
+<section class="py-5 bg-light min-vh-100 d-flex align-items-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-7 col-lg-6">
+                <div class="card border-0 shadow-lg p-4 rounded-4">
+                    <div class="text-center mb-4">
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-2">Anza Libre Leo</span>
+                        <h3 class="fw-bold text-dark">Sajili Biashara Yako</h3>
+                        <p class="text-muted small">Jaza fomu hii fupi kuanza kutumia Mkolani POS</p>
+                    </div>
+
+                    <form action="{{ url_for('register') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Jina la Biashara / Duka</label>
+                            <input type="text" name="business_name" class="form-control" placeholder="Mfano: Mkolani Stationery" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Jina la Mwenye Duka</label>
+                                <input type="text" name="owner_name" class="form-control" placeholder="Jina Kamili" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Namba ya Simu</label>
+                                <input type="tel" name="phone" class="form-control" placeholder="0625567603" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Aina ya Biashara</label>
+                            <select name="business_type" class="form-select" required>
+                                <option value="retail" selected>Duka la Rejareja / Duka la Dawa</option>
+                                <option value="stationery">Stationery & Typing</option>
+                                <option value="hardware">Hardware & Vifaa vya Ujenzi</option>
+                                <option value="wholesale">Jumla (Wholesale)</option>
+                                <option value="other">Aina Nyingine</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Barua Pepe (Email)</label>
+                            <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-semibold">Neno la Siri (Password)</label>
+                            <input type="password" name="password" class="form-control" placeholder="Weka password madhubuti" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">SAJILI BIASHARA YAKO</button>
+
+                        <div class="text-center">
+                            <small class="text-muted">Tayari una akaunti? <a href="{{ url_for('login') }}" class="text-primary fw-bold text-decoration-none">Ingia Hapa</a></small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
