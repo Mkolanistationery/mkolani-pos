@@ -1,206 +1,483 @@
-import os
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
+<!doctype html>
+<html lang="sw">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}e-RITA Portal | Registration, Insolvency & Trusteeship Agency{% endblock %}</title>
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'mkolani-secret-key-2026')
+    <!-- Google Fonts & Bootstrap 5 -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- CSS Yako ya Mfumo -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    
+    <style>
+        html { scroll-behavior: smooth; }
+        .fs-7 { font-size: 0.8rem; }
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1050;
+            background-color: #25d366;
+            color: white;
+            border-radius: 50px;
+            padding: 10px 20px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .whatsapp-btn:hover { color: white; background-color: #128c7e; }
+    </style>
+</head>
+<body>
 
-# DATABASE CONFIGURATION
-db_url = os.environ.get('DATABASE_URL', 'sqlite:///mkolani_pos.db')
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+    {% if current_user.is_authenticated %}
+    <!-- ========================================================= -->
+    <!-- A. DASHBOARD YA NDANI                                      -->
+    <!-- ========================================================= -->
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    <!-- SIDEBAR LEFT -->
+    <aside class="app-sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-box-seam-fill text-primary me-2"></i>MKOLANI POS
+        </div>
+        
+        <div class="sidebar-menu">
+            <div class="menu-header">KUU</div>
+            <a href="{{ url_for('index') }}" class="sidebar-link">
+                <i class="bi bi-grid-1x2"></i> <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('sales') }}" class="sidebar-link">
+                <i class="bi bi-cart3"></i> <span>Mauzo (POS)</span>
+            </a>
 
-db = SQLAlchemy(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-login_manager.login_message_category = 'warning'
+            <div class="menu-header">CAMPAIGNS & CRM</div>
+            <a href="{{ url_for('sms_center') }}" class="sidebar-link">
+                <i class="bi bi-chat-left-text"></i> <span>SMS Center</span>
+            </a>
+            <a href="{{ url_for('customers') }}" class="sidebar-link">
+                <i class="bi bi-people"></i> <span>Wateja (CRM)</span>
+            </a>
+            <a href="{{ url_for('debts') }}" class="sidebar-link">
+                <i class="bi bi-wallet2"></i> <span>Madeni</span>
+            </a>
 
-# MODEL YA MTUMIAJI / BIASHARA
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    business_name = db.Column(db.String(150), nullable=False)
-    owner_name = db.Column(db.String(150), nullable=True)
-    phone = db.Column(db.String(20), nullable=True)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.Text, nullable=False)  # Imerekebishwa kuwa Text ili kuzuia error ya urefu wa hash
-    business_type = db.Column(db.String(50), default='retail')
-    role = db.Column(db.String(20), default='user')  # 'user' au 'master'
+            <div class="menu-header">INVENTORY & EXPENSES</div>
+            <a href="{{ url_for('products') }}" class="sidebar-link">
+                <i class="bi bi-boxes"></i> <span>Stoko & Bidhaa</span>
+            </a>
+            <a href="{{ url_for('expenses') }}" class="sidebar-link">
+                <i class="bi bi-receipt-cutoff"></i> <span>Matumizi</span>
+            </a>
+            <a href="{{ url_for('reports') }}" class="sidebar-link">
+                <i class="bi bi-graph-up-arrow"></i> <span>Ripoti</span>
+            </a>
 
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        return db.session.get(User, int(user_id))
-    except Exception:
-        return None
+            {% if current_user.role == 'master' %}
+            <div class="menu-header">ADMINISTRATION</div>
+            <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link text-warning">
+                <i class="bi bi-shield-lock-fill"></i> <span>Master Panel</span>
+            </a>
+            {% endif %}
+        </div>
 
-# UTENGENEZAJI WA TABLES YA DATABASE KIOTOMATIKI
-with app.app_context():
-    try:
-        db.create_all()
-    except Exception as e:
-        print(f"Error creating database tables: {e}")
+        <div class="p-3 border-top">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center overflow-hidden">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:34px; height:34px; font-weight:bold;">
+                        {{ current_user.email[0]|upper }}
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="fw-bold text-truncate small" style="max-width: 130px;">{{ current_user.business_name }}</div>
+                        <div class="text-muted small text-truncate" style="font-size: 0.7rem; max-width: 130px;">{{ current_user.email }}</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="text-danger ms-2" title="Log out"><i class="bi bi-box-arrow-right fs-5"></i></a>
+            </div>
+        </div>
+    </aside>
 
-# HAKIKISHA ENDPOINTS ZOTE ZINAPATIKANA KWENYE TEMPLATES
-@app.context_processor
-def inject_endpoints():
-    return dict(endpoints=[rule.endpoint for rule in app.url_map.iter_rules()])
+    <!-- MAIN CONTENT RIGHT -->
+    <div class="main-wrapper">
+        <header class="top-navbar d-flex justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-light text-dark border px-3 py-2 fw-semibold">
+                    <i class="bi bi-shop me-1 text-primary"></i> {{ current_user.business_type|upper if current_user.business_type else 'RETAIL' }}
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="balance-card d-flex align-items-center gap-2">
+                    <i class="bi bi-chat-left-dots text-warning"></i>
+                    <span class="small">SMS Balance: <strong>108</strong></span>
+                </div>
+                <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-gear me-1"></i> Mipangilio
+                </a>
+            </div>
+        </header>
 
-# 1. HOME / INDEX ROUTE
-@app.route('/')
-def index():
-    if current_user.is_authenticated:
-        return render_template('dashboard.html')
-    return render_template('base.html')
+        <main class="p-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endwith %}
 
-# 2. ROUTE YA KUSAJILI BIASHARA MPYA (REGISTER - MOJA KWA MOJA DASHBOARD)
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
-    if request.method == 'POST':
-        try:
-            business_name = request.form.get('business_name')
-            owner_name = request.form.get('owner_name')
-            phone = request.form.get('phone')
-            email = request.form.get('email', '').lower().strip()
-            password = request.form.get('password')
-            business_type = request.form.get('business_type', 'retail')
+    {% else %}
+    <!-- ========================================================= -->
+    <!-- B. PUBLIC e-RITA STYLE PORTAL (KABLA YA LOG IN)            -->
+    <!-- ========================================================= -->
 
-            if not email or not password or not business_name:
-                flash('Tafadhali jaza taarifa zote zinazohitajika.', 'danger')
-                return redirect(url_for('register'))
+    <!-- TOP HEADER -->
+    <div class="bg-dark text-white py-1 px-3 fs-7">
+        <div class="container d-flex justify-content-between align-items-center">
+            <small>
+                <strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Wizara ya Katiba na Sheria | Hotline: +255 (22) 2924180 / 181
+            </small>
+            <small>🇹🇿 Swahili | 🇬🇧 English</small>
+        </div>
+    </div>
 
-            # Angalia kama email ipo tayari
-            existing_user = User.query.filter_by(email=email).first()
-            if existing_user:
-                flash('Barua pepe hii tayari imeshasajiliwa! Tafadhali ingia.', 'warning')
-                return redirect(url_for('login'))
+    <!-- MAIN NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary fs-4" href="/">
+                e-RITA Portal
+                <span class="d-block text-muted fs-7 fw-normal">Registration, Insolvency & Trusteeship Agency</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="publicNav">
+                <ul class="navbar-nav me-auto ms-lg-4 mb-2 mb-lg-0 fw-semibold">
+                    <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services">Birth Certificate Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services">Death Certificate Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#tracker">Track Status</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#faq">FAQ & Support</a></li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4">Sign in</a>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-            # Hash Password kwa njia salama (pbkdf2:sha256 kuzuia Server Error)
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+    <!-- PUBLIC CONTENT CONTAINER -->
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="container mt-3">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endwith %}
 
-            new_user = User(
-                business_name=business_name,
-                owner_name=owner_name,
-                phone=phone,
-                email=email,
-                password=hashed_password,
-                business_type=business_type
-            )
+        {% block public_content %}
+        <!-- HERO SECTION WITH LOGIN FORM -->
+        <section class="py-5 bg-light border-bottom">
+            <div class="container">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Official Tanzania Government Portal</span>
+                        <h1 class="display-5 fw-bold text-dark mb-3">RITA Services with Speed, Security and Ease</h1>
+                        <p class="lead text-muted mb-4">Register and apply for Birth and Death Certificates online. Sign in to your account or create a new account to get started.</p>
+                        
+                        <div class="row text-center g-3 pt-3 border-top">
+                            <div class="col-4">
+                                <h4 class="fw-bold text-primary mb-0">1.2M+</h4>
+                                <small class="text-muted">Online Applications Processed</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="fw-bold text-primary mb-0">&lt; 48 HRS</h4>
+                                <small class="text-muted">Average Processing Time</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="fw-bold text-primary mb-0">24/7</h4>
+                                <small class="text-muted">Customer and GePG Support</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-5">
+                        <div class="card border-0 shadow-lg p-4 rounded-4">
+                            <h5 class="fw-bold text-dark mb-1">Welcome back</h5>
+                            <p class="text-muted small mb-3">Please key in your registered system credentials below to verify your identity.</p>
+                            
+                            <form action="{{ url_for('login') }}" method="POST">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Email</label>
+                                    <input type="email" name="email" class="form-control" placeholder="name@domain.com" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Password</label>
+                                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none small">Forgot password?</a>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">Sign in</button>
+                                
+                                <div class="text-center">
+                                    <small class="text-muted">Don't have an account? <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none">Register here</a></small>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-            db.session.add(new_user)
-            db.session.commit()
+        <!-- SERVICES & OFFICIAL FEES -->
+        <section id="services" class="py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h6 class="text-primary text-uppercase fw-bold">SERVICES & OFFICIAL FEES</h6>
+                    <h2 class="fw-bold text-dark">Available Services & Applicable Fees</h2>
+                    <p class="text-muted">Select a service below to view instructions, required documents, and start your online application.</p>
+                </div>
+                
+                <div class="row g-4">
+                    <!-- Birth Certificate -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Civil Registration</span>
+                            <h5 class="fw-bold text-dark">Birth Certificate</h5>
+                            <p class="text-muted small">Apply for new birth registration, certificate verification, duplicates, or correction of details on existing birth certificates.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Required Documents:</strong> Clinic Card / Notification, Parents' IDs, Proof of Birth.</p>
+                            <p class="fw-bold text-primary mb-0">Fee: TZS 7,000 - 20,000</p>
+                        </div>
+                    </div>
 
-            # INGIZA MTUMIAJI MOJA KWA MOJA KWENYE MFUMO (AUTO LOGIN)
-            login_user(new_user)
-            flash(f'Hongera {business_name}! Usajili umekamilika. Karibu kwenye Mkolani POS!', 'success')
-            return redirect(url_for('index'))
+                    <!-- Death Certificate -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Civil Registration</span>
+                            <h5 class="fw-bold text-dark">Death Certificate</h5>
+                            <p class="text-muted small">Register a death, request certified copies, or complete verification of death records issued by RITA.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Required Documents:</strong> Burial Permit / Hospital Notification, Deceased & Applicant IDs.</p>
+                            <p class="fw-bold text-primary mb-0">Fee: TZS 7,000 - 20,000</p>
+                        </div>
+                    </div>
 
-        except Exception as e:
-            db.session.rollback()
-            flash('Kuna tatizo limetokea wakati wa usajili. Tafadhali jaribu tena.', 'danger')
-            print(f"Registration Error: {e}")
-            return redirect(url_for('register'))
+                    <!-- Track Application Status -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Public Online Tool</span>
+                            <h5 class="fw-bold text-dark">Track Application Status</h5>
+                            <p class="text-muted small">Check real-time progress of your submitted application or verify payment status using your application code or GePG Control Number.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Required Numbers:</strong> Application Reference Number or GePG Control Number.</p>
+                            <p class="fw-bold text-success mb-0">Fee: Free</p>
+                        </div>
+                    </div>
 
-    return render_template('register.html')
+                    <!-- Certificate Verification -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Government Use</span>
+                            <h5 class="fw-bold text-dark">Certificate Verification</h5>
+                            <p class="text-muted small">Verify authenticity of RITA certificates for use in other government services, employment, education, and legal procedures.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Required Information:</strong><br>• Certificate Number or Application Code<br>• Applicant Name and Event Year</p>
+                            <p class="fw-bold text-primary mb-0">Fee: 6,000 TZS for Birth and Death Certificates</p>
+                        </div>
+                    </div>
 
-# 3. ROUTE YA LOG IN (INGIA KWENYE MFUMO)
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
+                    <!-- Duplicate Certificate -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Re-Issuance</span>
+                            <h5 class="fw-bold text-dark">Duplicate Certificate</h5>
+                            <p class="text-muted small">Apply for a replacement certificate if the original is lost, damaged, or needs re-issuance for official use.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Required Documents:</strong><br>• Original Certificate Number or Application Record<br>• Applicant NIDA ID</p>
+                            <p class="fw-bold text-primary mb-0">Fee: 7,000 TZS for Birth and Death Certificates</p>
+                        </div>
+                    </div>
 
-    if request.method == 'POST':
-        try:
-            email = request.form.get('email', '').lower().strip()
-            password = request.form.get('password')
+                    <!-- Certificate Correction -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Record Update</span>
+                            <h5 class="fw-bold text-dark">Certificate Correction</h5>
+                            <p class="text-muted small">Apply for correction of details on a certificate such as names, dates, or other records after submitting legal evidence.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Required Documents:</strong><br>• Copy of certificate with error<br>• Proof documents for correct details (e.g: affidavit / hospital letter)</p>
+                            <p class="fw-bold text-primary mb-0">Fee: 13,000 TZS for Birth and Death Certificates</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-            user = User.query.filter_by(email=email).first()
+        <!-- APPLICATION TRACKER -->
+        <section id="tracker" class="py-5 bg-light border-top border-bottom">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 text-center">
+                        <h6 class="text-primary text-uppercase fw-bold">APPLICATION TRACKER</h6>
+                        <h3 class="fw-bold text-dark mb-2">Track Your Application Status</h3>
+                        <p class="text-muted small mb-4">Enter both Application Code and GePG Control Number to check status.</p>
+                        
+                        <form class="row g-3 justify-content-center" onsubmit="event.preventDefault(); alert('Checking application status...');">
+                            <div class="col-md-5">
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Application Reference / Code" required>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="GePG Control Number" required>
+                            </div>
+                            <div class="col-md-10">
+                                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">Track Status</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-            if user and check_password_hash(user.password, password):
-                login_user(user)
-                flash('Karibu tena kwenye Mkolani POS!', 'success')
-                return redirect(url_for('index'))
-            else:
-                flash('Barua pepe au Neno la Siri sio sahihi.', 'danger')
-                return redirect(url_for('login'))
-        except Exception as e:
-            print(f"Login Error: {e}")
-            flash('Kuna tatizo limetokea wakati wa kuingia. Jaribu tena.', 'danger')
-            return redirect(url_for('login'))
+        <!-- FAQ SECTION -->
+        <section id="faq" class="py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold text-dark">Frequently Asked Questions (FAQ)</h2>
+                    <p class="text-muted">Get quick answers about using the e-RITA Portal and GePG payments.</p>
+                </div>
+                
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="accordion shadow-sm rounded-3 overflow-hidden" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        1. How do I apply for a Birth Certificate online?
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        Click on the 'Sign In' or 'Register Account' button to log in. Navigate to Birth Certificate Services, select your application type (New, Old to New), upload required documents, and submit.
+                                    </div>
+                                </div>
+                            </div>
 
-    return render_template('login.html')
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        2. How do I pay application fees using GePG?
+                                    </button>
+                                </h2>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        After submitting your application, a GePG Control Number will be generated. You can pay via M-PESA, TIGO PESA, or NMB / CRDB banks using the provided Control Number.
+                                    </div>
+                                </div>
+                            </div>
 
-# 4. ROUTE YA LOGOUT
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('Umetoka kwenye mfumo kikamilifu.', 'info')
-    return redirect(url_for('index'))
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                        3. How long does it take to process a birth or death certificate?
+                                    </button>
+                                </h2>
+                                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        The average processing time is less than 48 hours once payment and all required documents are verified.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-# 5. FORGOT PASSWORD ROUTE
-@app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        flash('Ombi lako limepokelewa. Wasiliana na msaada kupitia WhatsApp (+255 625 567 603) kwa usaidizi wa haraka.', 'info')
-        return redirect(url_for('index'))
-    return redirect(url_for('index'))
+        <!-- FORGOT PASSWORD MODAL -->
+        <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-dark" id="forgotPasswordModalLabel">
+                            <i class="bi bi-key-fill text-warning me-2"></i>Reset Password
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3">Enter your registered email address below to receive password reset instructions.</p>
+                        
+                        <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Reset link sent to your email.');">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Email</label>
+                                <input type="email" name="email" class="form-control" placeholder="name@domain.com" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">Send Instructions</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-# 6. ROUTE ZINGINE ZA DASHBOARD
-@app.route('/sales')
-@login_required
-def sales():
-    return render_template('sales.html')
+        <!-- PUBLIC FOOTER -->
+        <footer class="bg-dark text-white pt-5 pb-3">
+            <div class="container">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <h5 class="fw-bold text-primary mb-2">RITA Tanzania</h5>
+                        <h6 class="fw-bold mb-3">e-RITA Citizen Portal</h6>
+                        <p class="text-muted small">e-RITA Portal is the official digital portal of the Registration, Insolvency and Trusteeship Agency (RITA) for civil registration, trusteeship, and insolvency services in Tanzania.</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="fw-bold mb-3">Quick Links</h6>
+                        <ul class="list-unstyled text-muted small">
+                            <li class="mb-1"><a href="#" class="text-muted text-decoration-none">Home</a></li>
+                            <li class="mb-1"><a href="#services" class="text-muted text-decoration-none">Services</a></li>
+                            <li class="mb-1"><a href="#tracker" class="text-muted text-decoration-none">Track Status</a></li>
+                            <li class="mb-1"><a href="#faq" class="text-muted text-decoration-none">FAQ & Support</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="fw-bold mb-3">Head Office Contacts</h6>
+                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-2"></i>Mtaa wa Simu / Kambarage, Dodoma, Tanzania</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-telephone me-2"></i>+255 26 232 4053 / 0800 110 055</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-envelope me-2"></i>info@rita.go.tz</p>
+                    </div>
+                    <div class="col-md-2">
+                        <h6 class="fw-bold mb-3">Secure GePG Payments</h6>
+                        <p class="text-muted small mb-2">This platform uses Tanzania Government GePG for fast and secure payments.</p>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <span class="badge bg-secondary">M-PESA</span>
+                            <span class="badge bg-secondary">TIGO PESA</span>
+                            <span class="badge bg-secondary">NMB / CRDB</span>
+                        </div>
+                    </div>
+                </div>
+                <hr class="border-secondary">
+                <p class="text-center text-muted small mb-0">&copy; 2026 Registration, Insolvency & Trusteeship Agency (RITA). All rights reserved.</p>
+            </div>
+        </footer>
+        {% endblock %}
+    </main>
 
-@app.route('/sms-center')
-@login_required
-def sms_center():
-    return render_template('sms_center.html')
+    {% endif %}
 
-@app.route('/customers')
-@login_required
-def customers():
-    return render_template('customers.html')
-
-@app.route('/debts')
-@login_required
-def debts():
-    return render_template('debts.html')
-
-@app.route('/products')
-@login_required
-def products():
-    return render_template('products.html')
-
-@app.route('/expenses')
-@login_required
-def expenses():
-    return render_template('expenses.html')
-
-@app.route('/reports')
-@login_required
-def reports():
-    return render_template('reports.html')
-
-@app.route('/profile')
-@login_required
-def profile():
-    return render_template('profile.html')
-
-@app.route('/admin')
-@login_required
-def admin_dashboard():
-    if current_user.role != 'master':
-        flash('Huna ruhusa ya kuingia hapa!', 'danger')
-        return redirect(url_for('index'))
-    return render_template('admin.html')
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
