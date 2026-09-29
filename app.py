@@ -27,13 +27,16 @@ class User(UserMixin, db.Model):
     owner_name = db.Column(db.String(150), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.Text, nullable=False)  # Imerekebishwa kuwa Text ili isikwame kwa urefu wa hash
+    password = db.Column(db.Text, nullable=False)  # Imeweka Text ili kuzuia truncation ya password hash
     business_type = db.Column(db.String(50), default='retail')
     role = db.Column(db.String(20), default='user')  # 'user' au 'master'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))  # Imerekebishwa kulingana na SQLAlchemy mpya
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception:
+        return None
 
 # UTENGENEZAJI WA TABLES YA DATABASE KIOTOMATIKI
 with app.app_context():
@@ -54,7 +57,7 @@ def index():
         return render_template('dashboard.html')
     return render_template('base.html')
 
-# 2. ROUTE YA KUSAJILI BIASHARA MPYA
+# 2. ROUTE YA KUSAJILI BIASHARA MPYA (REGISTER - MOJA KWA MOJA DASHBOARD)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -79,7 +82,7 @@ def register():
                 flash('Barua pepe hii tayari imeshasajiliwa! Tafadhali ingia.', 'warning')
                 return redirect(url_for('login'))
 
-            # Ku-hash password bila kuweka vikwazo vya aina ya hash
+            # Hash Password kwa njia salama
             hashed_password = generate_password_hash(password)
 
             new_user = User(
@@ -134,7 +137,7 @@ def login():
 
     return render_template('login.html')
 
-# 4. ROUTE YA LOGOUT
+# 4. ROUTE YA LOGOUT (TOKA KWENYE MFUMO)
 @app.route('/logout')
 @login_required
 def logout():
