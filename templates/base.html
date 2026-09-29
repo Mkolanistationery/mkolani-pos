@@ -1,407 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sw">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Mkolani POS | Comprehensive Management System{% endblock %}</title>
-
-    <!-- Google Fonts & Bootstrap 5 -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    
-    <!-- CSS Yako ya Mfumo -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-    
-    <style>
-        html { scroll-behavior: smooth; }
-        .fs-7 { font-size: 0.8rem; }
-        .whatsapp-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1050;
-            background-color: #25d366;
-            color: white;
-            border-radius: 50px;
-            padding: 10px 20px;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .whatsapp-btn:hover { color: white; background-color: #128c7e; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mkolani POS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-
-    {% if current_user.is_authenticated %}
-    <!-- ========================================================= -->
-    <!-- A. DASHBOARD YA NDANI                                      -->
-    <!-- ========================================================= -->
-
-    <!-- SIDEBAR LEFT -->
-    <aside class="app-sidebar">
-        <div class="sidebar-brand">
-            <i class="bi bi-box-seam-fill text-primary me-2"></i>MKOLANI POS
-        </div>
-        
-        <div class="sidebar-menu">
-            <div class="menu-header">KUU</div>
-            <a href="{{ url_for('index') }}" class="sidebar-link">
-                <i class="bi bi-grid-1x2"></i> <span>Dashboard</span>
-            </a>
-            <a href="{{ url_for('sales') }}" class="sidebar-link">
-                <i class="bi bi-cart3"></i> <span>Mauzo (POS)</span>
-            </a>
-
-            <div class="menu-header">CAMPAIGNS & CRM</div>
-            <a href="{{ url_for('sms_center') }}" class="sidebar-link">
-                <i class="bi bi-chat-left-text"></i> <span>SMS Center</span>
-            </a>
-            <a href="{{ url_for('customers') }}" class="sidebar-link">
-                <i class="bi bi-people"></i> <span>Wateja (CRM)</span>
-            </a>
-            <a href="{{ url_for('debts') }}" class="sidebar-link">
-                <i class="bi bi-wallet2"></i> <span>Madeni</span>
-            </a>
-
-            <div class="menu-header">INVENTORY & EXPENSES</div>
-            <a href="{{ url_for('products') }}" class="sidebar-link">
-                <i class="bi bi-boxes"></i> <span>Stoko & Bidhaa</span>
-            </a>
-            <a href="{{ url_for('expenses') }}" class="sidebar-link">
-                <i class="bi bi-receipt-cutoff"></i> <span>Matumizi</span>
-            </a>
-            <a href="{{ url_for('reports') }}" class="sidebar-link">
-                <i class="bi bi-graph-up-arrow"></i> <span>Ripoti</span>
-            </a>
-
-            {% if current_user.role == 'master' %}
-            <div class="menu-header">ADMINISTRATION</div>
-            <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link text-warning">
-                <i class="bi bi-shield-lock-fill"></i> <span>Master Panel</span>
-            </a>
-            {% endif %}
-        </div>
-
-        <div class="p-3 border-top">
-            <div class="d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center overflow-hidden">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:34px; height:34px; font-weight:bold;">
-                        {{ current_user.email[0]|upper }}
-                    </div>
-                    <div class="overflow-hidden">
-                        <div class="fw-bold text-truncate small" style="max-width: 130px;">{{ current_user.business_name }}</div>
-                        <div class="text-muted small text-truncate" style="font-size: 0.7rem; max-width: 130px;">{{ current_user.email }}</div>
-                    </div>
-                </div>
-                <a href="{{ url_for('logout') }}" class="text-danger ms-2" title="Log out"><i class="bi bi-box-arrow-right fs-5"></i></a>
-            </div>
-        </div>
-    </aside>
-
-    <!-- MAIN CONTENT RIGHT -->
-    <div class="main-wrapper">
-        <header class="top-navbar d-flex justify-content-between align-items-center">
-            <div>
-                <span class="badge bg-light text-dark border px-3 py-2 fw-semibold">
-                    <i class="bi bi-shop me-1 text-primary"></i> {{ current_user.business_type|upper if current_user.business_type else 'RETAIL' }}
-                </span>
-            </div>
-            <div class="d-flex align-items-center gap-3">
-                <div class="balance-card d-flex align-items-center gap-2">
-                    <i class="bi bi-chat-left-dots text-warning"></i>
-                    <span class="small">SMS Balance: <strong>108</strong></span>
-                </div>
-                <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                    <i class="bi bi-gear me-1"></i> Mipangilio
-                </a>
-            </div>
-        </header>
-
-        <main class="p-4">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endwith %}
-
-            {% block content %}{% endblock %}
-        </main>
-    </div>
-
-    {% else %}
-    <!-- ========================================================= -->
-    <!-- B. PUBLIC PORTAL (KABLA YA LOG IN)                        -->
-    <!-- ========================================================= -->
-
-    <!-- TOP PUBLIC HEADER -->
-    <div class="bg-dark text-white py-1 px-3 fs-7">
-        <div class="container d-flex justify-content-between align-items-center">
-            <small>
-                <i class="bi bi-telephone-fill me-1 text-warning"></i> Hotline/WhatsApp: <a href="https://wa.me/255625567603" target="_blank" class="text-white text-decoration-none fw-bold">+255 625 567 603</a> | Mkolani, Mwanza, Tanzania
-            </small>
-            <small>🇹🇿 Swahili | 🇬🇧 English</small>
-        </div>
-    </div>
-
-    <!-- MAIN PUBLIC NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top shadow-sm">
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
         <div class="container">
-            <a class="navbar-brand fw-bold text-primary fs-4" href="/">
-                <i class="bi bi-box-seam-fill me-2"></i>MKOLANI POS
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="publicNav">
-                <ul class="navbar-nav me-auto ms-lg-4 mb-2 mb-lg-0 fw-semibold">
-                    <li class="nav-item"><a class="nav-link active" href="#">Nyumbani</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#services">Huduma Zetu</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#tracker">Fuatilia Risiti</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#faq">Msaada & FAQ</a></li>
-                </ul>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4">Ingia (Sign In)</a>
-                    <a href="{{ url_for('register') }}" class="btn btn-primary rounded-pill px-4">Sajili Biashara</a>
-                </div>
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">Mkolani POS</a>
+            <div>
+                {% if current_user.is_authenticated %}
+                    <span class="text-white me-3">{{ current_user.business_name }}</span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Toka</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-light btn-sm me-2">Ingia</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-warning btn-sm">Sajili Biashara</a>
+                {% endif %}
             </div>
         </div>
     </nav>
 
-    <!-- PUBLIC CONTENT CONTAINER -->
-    <main>
+    <div class="container">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, message in messages %}
-                <div class="container mt-3">
-                    <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                </div>
-            {% endfor %}
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
-        {% block public_content %}
-        <!-- HERO SECTION -->
-        <section class="py-5 bg-light border-bottom">
-            <div class="container">
-                <div class="row align-items-center g-4">
-                    <div class="col-lg-7">
-                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Rasmi Kwa Ajili Ya Biashara Yako</span>
-                        <h1 class="display-5 fw-bold text-dark mb-3">Mfumo wa Kisasa wa Usimamizi wa Mauzo, Stoko na Wateja</h1>
-                        <p class="lead text-muted mb-4">Simamia duka lako, ongeza mauzo, tuma SMS za matangazo kwa wateja, na ufuatilie madeni yako kwa usalama wa 100% mtandaoni.</p>
-                        <div class="d-flex flex-wrap gap-3 mb-4">
-                            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg rounded-pill px-4 fw-semibold">Anza Jaribio la Bure</a>
-                            <a href="#services" class="btn btn-outline-secondary btn-lg rounded-pill px-4">Angalia Huduma</a>
-                        </div>
-                        <div class="row text-center g-3 pt-3 border-top">
-                            <div class="col-4">
-                                <h4 class="fw-bold text-primary mb-0">1,000+</h4>
-                                <small class="text-muted">Maduka Yaliyosajiliwa</small>
-                            </div>
-                            <div class="col-4">
-                                <h4 class="fw-bold text-primary mb-0">&lt; 1 SEC</h4>
-                                <small class="text-muted">Muda wa Risiti</small>
-                            </div>
-                            <div class="col-4">
-                                <h4 class="fw-bold text-primary mb-0">24/7</h4>
-                                <small class="text-muted">Msaada wa Kazi</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-5">
-                        <div class="card border-0 shadow-lg p-4 rounded-4">
-                            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-shield-check text-success me-2"></i>Ingia Kwenye Akaunti</h5>
-                            <form action="{{ url_for('login') }}" method="POST">
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Barua Pepe (Email)</label>
-                                    <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
-                                </div>
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <label class="form-label small fw-semibold mb-0">Neno la Siri (Password)</label>
-                                        <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none small">Umesahau Password?</a>
-                                    </div>
-                                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold">INGIA KWENYE MFUMO</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SERVICES GRID SECTION -->
-        <section id="services" class="py-5">
-            <div class="container">
-                <div class="text-center mb-5">
-                    <h6 class="text-primary text-uppercase fw-bold">Huduma na Zana Zilizopo</h6>
-                    <h2 class="fw-bold text-dark">Kila Kitendo Unachohitaji Kuendesha Duka</h2>
-                </div>
-                <div class="row g-4">
-                    <div class="col-md-4">
-                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <div class="text-primary fs-1 mb-3"><i class="bi bi-cart-check"></i></div>
-                            <h5 class="fw-bold text-dark">Mauzo ya Papo hapo (POS)</h5>
-                            <p class="text-muted small mb-0">Uza bidhaa kwa haraka, kotoa risiti za digitali, na unganisha na mashine za risiti au printer za kawaida.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <div class="text-warning fs-1 mb-3"><i class="bi bi-chat-dots"></i></div>
-                            <h5 class="fw-bold text-dark">SMS Center & CRM</h5>
-                            <p class="text-muted small mb-0">Tuma SMS za matangazo kwa wateja wote au kumbusha madeni kwa kubonyeza kitufe kimoja tu.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <div class="text-success fs-1 mb-3"><i class="bi bi-boxes"></i></div>
-                            <h5 class="fw-bold text-dark">Usimamizi wa Stoko</h5>
-                            <p class="text-muted small mb-0">Pata taarifa za bidhaa zinazoisha, fuatilia faida, na udhibiti wafanyakazi wako bila wizi.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- RECEIPT TRACKER SECTION -->
-        <section id="tracker" class="py-5 bg-light border-top border-bottom">
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-md-8 text-center">
-                        <h3 class="fw-bold text-dark mb-2"><i class="bi bi-search text-primary me-2"></i>Fuatilia Risiti au Ombi la Mteja</h3>
-                        <p class="text-muted small mb-4">Ingiza namba yako ya risiti au ya ombi hapa chini ili kuhakiki na kuangalia hali yake.</p>
-                        <form class="row g-2 justify-content-center" onsubmit="event.preventDefault(); alert('Mfumo unahakiki namba yako ya risiti...');">
-                            <div class="col-md-8">
-                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Mfano: MKL-2026-98765" required>
-                            </div>
-                            <div class="col-md-4">
-                                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">Hakiki Risiti</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- FAQ SECTION -->
-        <section id="faq" class="py-5">
-            <div class="container">
-                <div class="text-center mb-5">
-                    <h6 class="text-primary text-uppercase fw-bold">Msaada & Maswali</h6>
-                    <h2 class="fw-bold text-dark">Maswali Yanayoulizwa Mara kwa Mara (FAQ)</h2>
-                </div>
-                <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <div class="accordion shadow-sm rounded-3 overflow-hidden" id="faqAccordion">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                        1. Mkolani POS inafanya kazi kwenye kifaa gani?
-                                    </button>
-                                </h2>
-                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
-                                        Inafanya kazi kwenye kifaa chochote chenye intaneti—simu ya mkononi, tablet, au kompyuta yoyote.
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                        2. Nawezaje kutuma SMS kwa wateja wangu?
-                                    </button>
-                                </h2>
-                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
-                                        Baada ya kuingia kwenye mfumo, nenda kwenye sehemu ya **SMS Center**, chagua wateja au ingiza jumbe na utume papo hapo.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- WHATSAPP FLOATING BUTTON -->
-        <a href="https://wa.me/255625567603?text=Habari%20Mkolani%20POS,%20naomba%20msaada%20kuhusu%20mfumo" target="_blank" class="whatsapp-btn">
-            <i class="bi bi-whatsapp fs-5"></i> <span>Msaada WhatsApp</span>
-        </a>
-
-        <!-- FORGOT PASSWORD MODAL -->
-        <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content rounded-4 border-0 shadow">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold text-dark" id="forgotPasswordModalLabel">
-                            <i class="bi bi-key-fill text-warning me-2"></i>Badilisha Neno la Siri
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body p-4">
-                        <p class="text-muted small mb-3">Ingiza barua pepe yako uliyosajilia ili kupata maelekezo ya kuweka upya neno lako la siri, au wasiliana nasi moja kwa moja kupitia WhatsApp.</p>
-                        
-                        <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Ombi lako limepokelewa. Wasiliana nasi WhatsApp kwa msaada wa haraka.');">
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold">Barua Pepe (Email)</label>
-                                <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">TUMA MAELEKEZO</button>
-                        </form>
-
-                        <div class="text-center pt-2 border-top">
-                            <small class="text-muted">Unahitaji msaada wa haraka?</small><br>
-                            <a href="https://wa.me/255625567603?text=Habari%20Mkolani%20POS,%20nimesahau%20password%20yangu" target="_blank" class="text-success fw-bold text-decoration-none small">
-                                <i class="bi bi-whatsapp me-1"></i> Wasiliana na Msaada WhatsApp (+255 625 567 603)
-                            </a>
-                        </div>
-                    </div>
-                </div>
+        {% block content %}
+        <div class="text-center py-5">
+            <h1 class="display-4 fw-bold text-primary">Karibu Mkolani POS</h1>
+            <p class="lead text-secondary">Mfumo wa kusimamia mauzo na biashara yako.</p>
+            <div class="mt-4">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-2">Sajili Biashara</a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg">Ingia</a>
             </div>
         </div>
-
-        <!-- PUBLIC FOOTER -->
-        <footer class="bg-dark text-white pt-5 pb-3">
-            <div class="container">
-                <div class="row g-4 mb-4">
-                    <div class="col-md-4">
-                        <h5 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam-fill me-2"></i>MKOLANI POS</h5>
-                        <p class="text-muted small">Mfumo rasmi wa usimamizi wa maduka, mauzo, na huduma za wateja nchini Tanzania.</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h6 class="fw-bold mb-3">Mawasiliano Mwanza</h6>
-                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-2"></i>Mkolani, Mwanza, Tanzania</p>
-                        <p class="text-muted small mb-1"><i class="bi bi-telephone me-2"></i>+255 625 567 603</p>
-                        <p class="text-muted small mb-1"><i class="bi bi-envelope me-2"></i>info@mkolanipos.co.tz</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h6 class="fw-bold mb-3">Njia za Malipo</h6>
-                        <div class="d-flex gap-2 text-muted flex-wrap">
-                            <span class="badge bg-secondary">M-PESA</span>
-                            <span class="badge bg-secondary">TIGO PESA</span>
-                            <span class="badge bg-secondary">CRDB / NMB</span>
-                        </div>
-                    </div>
-                </div>
-                <hr class="border-secondary">
-                <p class="text-center text-muted small mb-0">&copy; 2026 Mkolani POS. All rights reserved.</p>
-            </div>
-        </footer>
         {% endblock %}
-    </main>
+    </div>
 
-    {% endif %}
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    {% block scripts %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
