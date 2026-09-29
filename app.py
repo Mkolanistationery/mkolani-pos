@@ -163,7 +163,6 @@ def sales():
 def sms_center():
     return render_template('sms_center.html')
 
-# IMEREKEBISHWA: IMEONGEZWA POST METHOD NA KUHIFADHI WATEJA
 @app.route('/customers', methods=['GET', 'POST'])
 @login_required
 def customers():
@@ -211,9 +210,43 @@ def expenses():
 def reports():
     return render_template('reports.html')
 
-@app.route('/profile')
+# ==========================================
+# ROUTE YA PROFILE / MIPANGILIO (IMEREKEBISHWA)
+# ==========================================
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        # A. KUBADILISHA TAARIFA ZA BIASHARA
+        if action == 'update_info':
+            current_user.business_name = request.form.get('business_name')
+            current_user.owner_name = request.form.get('owner_name')
+            current_user.phone = request.form.get('phone')
+            current_user.business_type = request.form.get('business_type')
+            
+            try:
+                db.session.commit()
+                flash('Taarifa za biashara zimebadilishwa kikamilifu!', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash('Kuna tatizo limetokea wakati wa kuhifadhi.', 'danger')
+                
+        # B. KUBADILISHA PASSWORD
+        elif action == 'change_password':
+            old_password = request.form.get('old_password')
+            new_password = request.form.get('new_password')
+            
+            if check_password_hash(current_user.password, old_password):
+                current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+                db.session.commit()
+                flash('Neno la siri limebadilishwa kikamilifu!', 'success')
+            else:
+                flash('Neno la siri la zamani sio sahihi!', 'danger')
+
+        return redirect(url_for('profile'))
+
     return render_template('profile.html')
 
 @app.route('/admin')
