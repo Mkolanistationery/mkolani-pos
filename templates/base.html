@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Mkolani POS | Comprehensive Management System{% endblock %}</title>
+    <title>{% block title %}Mkolani Business Portal | Enterprise Management System{% endblock %}</title>
 
     <!-- Google Fonts & Bootstrap 5 -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
         html { scroll-behavior: smooth; }
         .fs-7 { font-size: 0.8rem; }
         
-        /* SIDEBAR STYLING SMART */
+        /* SIDEBAR STYLING SMART YA NDANI */
         {% if current_user.is_authenticated %}
         body { display: flex; min-height: 100vh; overflow-x: hidden; }
         .app-sidebar {
@@ -93,7 +93,9 @@
 <body>
 
     {% if current_user.is_authenticated %}
-    <!-- SIDEBAR LEFT -->
+    <!-- ========================================================= -->
+    <!-- A. DASHBOARD YA NDANI (SMART & POS READY)                  -->
+    <!-- ========================================================= -->
     <aside class="app-sidebar">
         <div class="sidebar-brand">
             <i class="bi bi-box-seam-fill me-2"></i>MKOLANI POS
@@ -154,7 +156,6 @@
         </div>
     </aside>
 
-    <!-- MAIN CONTENT RIGHT -->
     <div class="main-wrapper">
         <header class="top-navbar d-flex justify-content-between align-items-center">
             <div>
@@ -188,27 +189,47 @@
     </div>
 
     {% else %}
-    <!-- PUBLIC PORTAL FRAMEWORK -->
+    <!-- ========================================================= -->
+    <!-- B. PUBLIC PORTAL (PORTAL FORMAT - BIASHARA & TAASISI TZ)   -->
+    <!-- ========================================================= -->
+
+    <!-- TOP HEADER -->
     <div class="bg-dark text-white py-1 px-3 fs-7">
         <div class="container d-flex justify-content-between align-items-center">
-            <small><strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Business Management Portal | +255 625 567 603</small>
+            <small>
+                <strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Mfumo wa Risiti & Usimamizi wa Biashara na Taasisi | Hotline: +255 625 567 603
+            </small>
             <small>🇹🇿 Swahili | 🇬🇧 English</small>
         </div>
     </div>
 
+    <!-- MAIN NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold text-primary fs-4" href="/">
-                Mkolani Business Portal
-                <span class="d-block text-muted fs-7 fw-normal">Sales, School Management, Loans & Receipting Agency</span>
+                Mkolani Enterprise Portal
+                <span class="d-block text-muted fs-7 fw-normal">Smart POS, School Fees, Loans & Institutional Receipts Agency</span>
             </a>
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4">Sign in</a>
-                <a href="{{ url_for('register') }}" class="btn btn-primary rounded-pill px-4">Register Account</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="publicNav">
+                <ul class="navbar-nav me-auto ms-lg-4 mb-2 mb-lg-0 fw-semibold">
+                    <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services">Mauzo & Risiti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services">Shule & Mikopo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#tracker">Track Receipt</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#faq">FAQ & Support</a></li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4">Sign in</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary rounded-pill px-4">Register Account</a>
+                </div>
             </div>
         </div>
     </nav>
 
+    <!-- PUBLIC CONTENT CONTAINER -->
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}
@@ -221,8 +242,292 @@
             {% endfor %}
         {% endwith %}
 
-        {% block public_content %}{% endblock %}
+        {% block public_content %}
+        <!-- HERO SECTION WITH LOGIN FORM -->
+        <section class="py-5 bg-light border-bottom">
+            <div class="container">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Official All-in-One Business & Institutional Portal</span>
+                        <h1 class="display-5 fw-bold text-dark mb-3">Mkolani Services with Speed, Security and Ease</h1>
+                        <p class="lead text-muted mb-4">Mfumo kamili wa utoaji risiti za mashine, usimamizi wa maduka, shule, mikopo, na taasisi zote Tanzania. Sign in to your account or create a new account to get started.</p>
+                        
+                        <div class="row text-center g-3 pt-3 border-top">
+                            <div class="col-4">
+                                <h4 class="fw-bold text-primary mb-0">1.2M+</h4>
+                                <small class="text-muted">Digital Receipts Generated</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="fw-bold text-primary mb-0">&lt; 1 SEC</h4>
+                                <small class="text-muted">Average Receipt Printing Time</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="fw-bold text-primary mb-0">24/7</h4>
+                                <small class="text-muted">Customer & GePG Payment Support</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-5">
+                        <div class="card border-0 shadow-lg p-4 rounded-4">
+                            <h5 class="fw-bold text-dark mb-1">Welcome back</h5>
+                            <p class="text-muted small mb-3">Please key in your registered system credentials below to verify your identity.</p>
+                            
+                            <form action="{{ url_for('login') }}" method="POST">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Email</label>
+                                    <input type="email" name="email" class="form-control" placeholder="name@domain.com" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Password</label>
+                                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none small">Forgot password?</a>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">Sign in</button>
+                                
+                                <div class="text-center">
+                                    <small class="text-muted">Don't have an account? <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none">Register here</a></small>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SERVICES & OFFICIAL FEES -->
+        <section id="services" class="py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h6 class="text-primary text-uppercase fw-bold">SERVICES & ENTERPRISE TOOLS</h6>
+                    <h2 class="fw-bold text-dark">Available Services & Applicable Features</h2>
+                    <p class="text-muted">Select a service category below to view features, management tools, and start your enterprise workflow.</p>
+                </div>
+                
+                <div class="row g-4">
+                    <!-- Mauzo na Risiti -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Commercial Operations</span>
+                            <h5 class="fw-bold text-dark">POS & Utoaji Risiti za Mashine</h5>
+                            <p class="text-muted small">Kutoa risiti za mashine ndogo za POS (Thermal 58mm/80mm), kusimamia mauzo ya kila siku, na kuweka logo ya duka lako.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Logo kwenye Risiti, Stoko, Duka la Rejareja & Jumla.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Inafanya Kazi 100%</p>
+                        </div>
+                    </div>
+
+                    <!-- Usimamizi wa Shule -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Educational Institutions</span>
+                            <h5 class="fw-bold text-dark">Usimamizi wa Ada & Shule</h5>
+                            <p class="text-muted small">Kutoa risiti za Ada kwa wanafunzi, kusimamia taarifa za wazazi, na kutuma SMS za matokeo au vikumbusho vya ada.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Risiti za Ada, Mfumo wa SMS kwa Wazazi, Rekodi za Shule.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
+                        </div>
+                    </div>
+
+                    <!-- Usimamizi wa Mikopo -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Financial & Microfinance</span>
+                            <h5 class="fw-bold text-dark">Mikopo, Taasisi & Madeni</h5>
+                            <p class="text-muted small">Kusajili mikopo ya wateja, kuhesabu riba, kutoa risiti za marejesho, na kuwakumbusha wakopaji kwa SMS.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Vikundi vya Mikopo, Hesabu za Riba, Risiti za Marejesho.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
+                        </div>
+                    </div>
+
+                    <!-- Receipt Verification -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Public Online Tool</span>
+                            <h5 class="fw-bold text-dark">Uhakiki wa Risiti Mtandaoni</h5>
+                            <p class="text-muted small">Mteja au mhakiki anaweza kuingiza namba ya risiti ili kuhakiki kama imetolewa na biashara/taasisi yako halali.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Required Numbers:</strong> Application Reference Code au Control Number.</p>
+                            <p class="fw-bold text-success mb-0">Fee: Free</p>
+                        </div>
+                    </div>
+
+                    <!-- Bulk SMS & CRM -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Marketing & CRM</span>
+                            <h5 class="fw-bold text-dark">SMS Center & Branding</h5>
+                            <p class="text-muted small">Tuma matangazo ya biashara kwa wateja wote, tuma risiti za SMS, na jenga mahusiano mema na wateja wako.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Bulk SMS Gateway, Wateja CRM, Custom Sender ID.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Inafanya Kazi</p>
+                        </div>
+                    </div>
+
+                    <!-- Stoko na Matumizi -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Inventory Control</span>
+                            <h5 class="fw-bold text-dark">Stoko & Taarifa za Matumizi</h5>
+                            <p class="text-muted small">Fuatilia bidhaa zinazoisha, zuia wizi dukani au taasisi, na unganisha taarifa zote za mapato na matumizi.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Alerts za Stoko, Kurekodi Matumizi, Ripoti za Faida.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RECEIPT TRACKER -->
+        <section id="tracker" class="py-5 bg-light border-top border-bottom">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 text-center">
+                        <h6 class="text-primary text-uppercase fw-bold">RECEIPT & TRANSACTION TRACKER</h6>
+                        <h3 class="fw-bold text-dark mb-2">Track Receipt or Application Status</h3>
+                        <p class="text-muted small mb-4">Enter both Receipt Reference Code and Payment Control Number to check status.</p>
+                        
+                        <form class="row g-3 justify-content-center" onsubmit="event.preventDefault(); alert('Checking receipt verification status...');">
+                            <div class="col-md-5">
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Receipt / Reference Code" required>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="GePG / Payment Control No" required>
+                            </div>
+                            <div class="col-md-10">
+                                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">Track Status</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ SECTION -->
+        <section id="faq" class="py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold text-dark">Frequently Asked Questions (FAQ)</h2>
+                    <p class="text-muted">Get quick answers about using Mkolani Enterprise Portal and receipt printing.</p>
+                </div>
+                
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="accordion shadow-sm rounded-3 overflow-hidden" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        1. Nawezaje kutoa risiti za biashara au ada ya shule mtandaoni?
+                                    </button>
+                                </h2>
+                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        Ingia kwenye akaunti yako, chagua sehemu ya Mauzo au Ada, ingiza taarifa kisha bonyeza 'Print Risiti'. Unaweza pia kuweka Logo ya duka au taasisi yako.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        2. Je, mfumo unasaidia mashine ndogo za POS (Thermal Printers)?
+                                    </button>
+                                </h2>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        Ndiyo, mfumo umetengenezwa kwa ajili ya ku-print risiti za 58mm na 80mm kupitia Bluetooth, USB, au Wi-Fi Thermal POS printers.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                        3. Je, inafaa kwa ajili ya taasisi za mikopo na shule?
+                                    </button>
+                                </h2>
+                                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body text-muted small">
+                                        Ndiyo, Mkolani Enterprise Portal inasaidia usimamizi wa mikopo, ada za shule, stoko, na usimamizi wa wateja kote nchini Tanzania.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FORGOT PASSWORD MODAL -->
+        <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-dark" id="forgotPasswordModalLabel">
+                            <i class="bi bi-key-fill text-warning me-2"></i>Reset Password
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3">Enter your registered email address below to receive password reset instructions.</p>
+                        
+                        <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Reset link sent to your email.');">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Email</label>
+                                <input type="email" name="email" class="form-control" placeholder="name@domain.com" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">Send Instructions</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUBLIC FOOTER -->
+        <footer class="bg-dark text-white pt-5 pb-3">
+            <div class="container">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <h5 class="fw-bold text-primary mb-2">Mkolani Management</h5>
+                        <h6 class="fw-bold mb-3">e-Mkolani Enterprise Portal</h6>
+                        <p class="text-muted small">Mfumo rasmi wa utoaji risiti za digitali, usimamizi wa biashara, ada za shule, mikopo, na huduma za CRM kwa taasisi zote Tanzania.</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="fw-bold mb-3">Quick Links</h6>
+                        <ul class="list-unstyled text-muted small">
+                            <li class="mb-1"><a href="#" class="text-muted text-decoration-none">Home</a></li>
+                            <li class="mb-1"><a href="#services" class="text-muted text-decoration-none">Services</a></li>
+                            <li class="mb-1"><a href="#tracker" class="text-muted text-decoration-none">Track Status</a></li>
+                            <li class="mb-1"><a href="#faq" class="text-muted text-decoration-none">FAQ & Support</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-3">
+                        <h6 class="fw-bold mb-3">Head Office Contacts</h6>
+                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-2"></i>Mkolani, Mwanza, Tanzania</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-telephone me-2"></i>+255 625 567 603</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-envelope me-2"></i>info@mkolanipos.co.tz</p>
+                    </div>
+                    <div class="col-md-2">
+                        <h6 class="fw-bold mb-3">Payments Supported</h6>
+                        <p class="text-muted small mb-2">Mfumo unasaidia malipo yote ya simu na benki kwa haraka.</p>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <span class="badge bg-secondary">M-PESA</span>
+                            <span class="badge bg-secondary">TIGO PESA</span>
+                            <span class="badge bg-secondary">NMB / CRDB</span>
+                        </div>
+                    </div>
+                </div>
+                <hr class="border-secondary">
+                <p class="text-center text-muted small mb-0">&copy; 2026 Mkolani Enterprise Portal. All rights reserved.</p>
+            </div>
+        </footer>
+        {% endblock %}
     </main>
+
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
