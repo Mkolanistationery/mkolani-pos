@@ -48,7 +48,7 @@
                 </div>
                 <div>
                     <small class="text-muted d-block">Wateja Kwenye Mfumo</small>
-                    <h4 class="fw-bold text-dark mb-0">{{ customers_list|length }}</h4>
+                    <h4 class="fw-bold text-dark mb-0">{% if customers_list %}{{ customers_list|length }}{% else %}0{% endif %}</h4>
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Tuma SMS Kwa:</label>
                         <select name="recipient_type" class="form-select" id="recipientType" onchange="toggleRecipientInput(this)">
-                            <option value="all">Wateja Wote Waliosajiliwa ({{ customers_list|length }} Wateja)</option>
+                            <option value="all">Wateja Wote Waliosajiliwa ({% if customers_list %}{{ customers_list|length }}{% else %}0{% endif %} Wateja)</option>
                             <option value="single">Mteja Mmoja Maalum</option>
                             <option value="custom">Namba za Simu (Zitenganishe kwa koma)</option>
                         </select>
@@ -77,9 +77,13 @@
                     <div class="mb-3 d-none" id="singleCustomerDiv">
                         <label class="form-label small fw-semibold">Chagua Mteja:</label>
                         <select name="single_customer" class="form-select">
-                            {% for c in customers_list %}
-                            <option value="{{ c.phone }}">{{ c.name }} ({{ c.phone }})</option>
-                            {% endfor %}
+                            {% if customers_list %}
+                                {% for c in customers_list %}
+                                <option value="{{ c.phone }}">{{ c.name }} ({{ c.phone }})</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="">Hakuna mteja aliyesajiliwa</option>
+                            {% endif %}
                         </select>
                     </div>
 
@@ -92,7 +96,7 @@
                     <!-- UJUMBE -->
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Ujumbe Wako (SMS Content):</label>
-                        <textarea name="message" id="smsText" class="form-control" rows="4" placeholder="Andika ujumbe wako hapa... Mfano: Habari! Tunayo punguzo la bei ya bidhaa zote wiki hii. Karibu {{ current_user.business_name }}!" onkeyup="countChars(this)" required></textarea>
+                        <textarea name="message" id="smsText" class="form-control" rows="4" placeholder="Andika ujumbe wako hapa..." onkeyup="countChars(this)" required></textarea>
                         <div class="d-flex justify-content-between align-items-center mt-1">
                             <small class="text-muted" id="charCounter">Herufi: 0 / 160 (SMS 1)</small>
                             <small class="text-primary fw-semibold">Sender ID: {{ current_user.business_name|upper }}</small>
@@ -106,9 +110,8 @@
             </div>
         </div>
 
-        <!-- KULIA: RECHARGE & SENDER ID -->
+        <!-- KULIA: RECHARGE -->
         <div class="col-lg-5">
-            <!-- ONGEZA SALIO -->
             <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
                 <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
                     <i class="bi bi-wallet-fill text-success me-2"></i>Ongeza Salio la SMS (Top Up)
@@ -168,14 +171,8 @@
                 <tbody class="fs-7">
                     <tr>
                         <td>29/09/2026 10:15 AM</td>
-                        <td>Wateja Wote (142)</td>
+                        <td>Wateja Wote</td>
                         <td>Habari! Risiti mpya na huduma za kadi sasa zinapatikana Mkolani POS. Karibuni sana!</td>
-                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success px-2 py-1">Imetumwa</span></td>
-                    </tr>
-                    <tr>
-                        <td>28/09/2026 04:30 PM</td>
-                        <td>0768XXXXXX</td>
-                        <td>Asante kwa kufanya manunuzi Mkolani POS. Risiti yako #MKL-8930 imekamilika.</td>
                         <td class="text-center"><span class="badge bg-success-subtle text-success border border-success px-2 py-1">Imetumwa</span></td>
                     </tr>
                 </tbody>
