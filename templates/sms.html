@@ -1,48 +1,200 @@
 {% extends "base.html" %}
-{% block title %}SMS Center | Mkolani POS{% endblock %}
+
+{% block title %}SMS Center & Utangazaji | Mkolani POS{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="fw-bold mb-0">SMS Sender Names & Campaigns</h4>
-        <p class="text-muted small">Simamia majina ya utumaji (Sender ID) na ujumbe wa SMS.</p>
+<div class="container-fluid py-2">
+    <!-- TITLE BAR -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-chat-left-text-fill text-primary me-2"></i>SMS Center & Utangazaji wa Biashara</h4>
+            <p class="text-muted small mb-0">Tuma SMS za matangazo, risiti na vikumbusho kwa wateja wako wote kwa haraka na urahisi.</p>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill shadow-sm">
+                <i class="bi bi-chat-dots-fill me-1"></i> Salio la SMS: <strong>108 SMS</strong>
+            </span>
+        </div>
     </div>
-    <button class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add new</button>
+
+    <!-- STATS CARDS -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white d-flex flex-row align-items-center">
+                <div class="bg-primary-subtle text-primary p-3 rounded-circle me-3">
+                    <i class="bi bi-send-fill fs-4"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block">SMS Zilizotumwa</small>
+                    <h4 class="fw-bold text-dark mb-0">1,420</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white d-flex flex-row align-items-center">
+                <div class="bg-success-subtle text-success p-3 rounded-circle me-3">
+                    <i class="bi bi-check-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block">Zilizowafikia Wateja</small>
+                    <h4 class="fw-bold text-dark mb-0">1,402 (98.7%)</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white d-flex flex-row align-items-center">
+                <div class="bg-info-subtle text-info p-3 rounded-circle me-3">
+                    <i class="bi bi-person-lines-fill fs-4"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block">Wateja Kwenye Mfumo</small>
+                    <h4 class="fw-bold text-dark mb-0">{{ customers_list|length }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- SHOTO: FOMU YA KUTUMA SMS -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                    <i class="bi bi-pencil-square text-primary me-2"></i>Andika Ujumbe wa SMS
+                </h6>
+
+                <form action="{{ url_for('sms_center') }}" method="POST">
+                    <!-- CHAGUA WALENGWA -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tuma SMS Kwa:</label>
+                        <select name="recipient_type" class="form-select" id="recipientType" onchange="toggleRecipientInput(this)">
+                            <option value="all">Wateja Wote Waliosajiliwa ({{ customers_list|length }} Wateja)</option>
+                            <option value="single">Mteja Mmoja Maalum</option>
+                            <option value="custom">Namba za Simu (Zitenganishe kwa koma)</option>
+                        </select>
+                    </div>
+
+                    <!-- MTEJA MMOJA -->
+                    <div class="mb-3 d-none" id="singleCustomerDiv">
+                        <label class="form-label small fw-semibold">Chagua Mteja:</label>
+                        <select name="single_customer" class="form-select">
+                            {% for c in customers_list %}
+                            <option value="{{ c.phone }}">{{ c.name }} ({{ c.phone }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- NAMBA ZA SIMU -->
+                    <div class="mb-3 d-none" id="customPhoneDiv">
+                        <label class="form-label small fw-semibold">Ingiza Namba za Simu:</label>
+                        <input type="text" name="custom_phones" class="form-control" placeholder="0768XXXXXX, 0712XXXXXX">
+                    </div>
+
+                    <!-- UJUMBE -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Ujumbe Wako (SMS Content):</label>
+                        <textarea name="message" id="smsText" class="form-control" rows="4" placeholder="Andika ujumbe wako hapa... Mfano: Habari! Tunayo punguzo la bei ya bidhaa zote wiki hii. Karibu {{ current_user.business_name }}!" onkeyup="countChars(this)" required></textarea>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <small class="text-muted" id="charCounter">Herufi: 0 / 160 (SMS 1)</small>
+                            <small class="text-primary fw-semibold">Sender ID: {{ current_user.business_name|upper }}</small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 py-2 fw-bold w-100">
+                        <i class="bi bi-send-fill me-1"></i> TUMA SMS SASA
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- KULIA: RECHARGE & SENDER ID -->
+        <div class="col-lg-5">
+            <!-- ONGEZA SALIO -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                    <i class="bi bi-wallet-fill text-success me-2"></i>Ongeza Salio la SMS (Top Up)
+                </h6>
+                <p class="text-muted small">Nunua kifurushi cha SMS kwa ajili ya matangazo ya duka lako. SMS hazina tarehe ya mwisho (No Expiry).</p>
+                
+                <div class="list-group mb-3">
+                    <label class="list-group-item d-flex justify-content-between align-items-center rounded-3 mb-2 border">
+                        <div>
+                            <input class="form-check-input me-2" type="radio" name="smsPackage" checked>
+                            <strong>Kifurushi cha Kawaida</strong>
+                            <div class="text-muted small">SMS 500</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">TZS 15,000</span>
+                    </label>
+                    <label class="list-group-item d-flex justify-content-between align-items-center rounded-3 mb-2 border">
+                        <div>
+                            <input class="form-check-input me-2" type="radio" name="smsPackage">
+                            <strong>Kifurushi cha Biashara</strong>
+                            <div class="text-muted small">SMS 2,000</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">TZS 50,000</span>
+                    </label>
+                    <label class="list-group-item d-flex justify-content-between align-items-center rounded-3 border">
+                        <div>
+                            <input class="form-check-input me-2" type="radio" name="smsPackage">
+                            <strong>Kifurushi cha Taasisi</strong>
+                            <div class="text-muted small">SMS 5,000</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">TZS 110,000</span>
+                    </label>
+                </div>
+
+                <button type="button" onclick="alert('Lipa kwa M-Pesa / Tigo Pesa Namba ya Kampuni: 567603 (Mkolani POS)');" class="btn btn-success w-100 rounded-pill fw-bold">
+                    <i class="bi bi-credit-card-fill me-1"></i> NUNUA SALIO LA SMS
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KUMBUMBUKU ZA SMS ZILIZOTUMWA -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mt-2">
+        <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+            <i class="bi bi-clock-history text-secondary me-2"></i>Kumbukumbu za SMS Zilizotumwa Karibuni
+        </h6>
+        
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light fs-7 text-uppercase text-secondary">
+                    <tr>
+                        <th>Tarehe</th>
+                        <th>Mteja / Namba</th>
+                        <th>Ujumbe Uliotumwa</th>
+                        <th class="text-center">Hali (Status)</th>
+                    </tr>
+                </thead>
+                <tbody class="fs-7">
+                    <tr>
+                        <td>29/09/2026 10:15 AM</td>
+                        <td>Wateja Wote (142)</td>
+                        <td>Habari! Risiti mpya na huduma za kadi sasa zinapatikana Mkolani POS. Karibuni sana!</td>
+                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success px-2 py-1">Imetumwa</span></td>
+                    </tr>
+                    <tr>
+                        <td>28/09/2026 04:30 PM</td>
+                        <td>0768XXXXXX</td>
+                        <td>Asante kwa kufanya manunuzi Mkolani POS. Risiti yako #MKL-8930 imekamilika.</td>
+                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success px-2 py-1">Imetumwa</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<div class="card beem-table shadow-sm">
-    <div class="table-responsive">
-        <table class="table mb-0 align-middle">
-            <thead>
-                <tr>
-                    <th>Sender Names</th>
-                    <th>Sample Content</th>
-                    <th>Networks</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="fw-bold text-primary">MKOLANISTRY</td>
-                    <td class="small text-muted" style="max-width: 300px;">
-                        "Ndugu Mzazi/Mteja, taarifa yako/matokeo yako yapo tayari. Ahsante kwa kuchagua Mkolani Stationery."
-                    </td>
-                    <td><span class="badge bg-light text-dark border">All Networks</span></td>
-                    <td><span class="status-badge-progress"><i class="bi bi-clock-history me-1"></i> In Progress</span></td>
-                    <td><a href="#" class="btn btn-link btn-sm text-decoration-none">View Status</a></td>
-                </tr>
-                <tr>
-                    <td class="fw-bold text-primary">MWZDIGITAL</td>
-                    <td class="small text-muted" style="max-width: 300px;">
-                        "Ndugu Mzazi, tunakukumbusha kumalizia salio la ada ya TZS 150,000 kabla ya tarehe 30/09/2026."
-                    </td>
-                    <td><span class="badge bg-light text-dark border">All Networks</span></td>
-                    <td><span class="status-badge-active"><i class="bi bi-check-circle me-1"></i> Approved</span></td>
-                    <td><a href="#" class="btn btn-link btn-sm text-decoration-none">View Status</a></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+<script>
+function toggleRecipientInput(select) {
+    const val = select.value;
+    document.getElementById('singleCustomerDiv').classList.toggle('d-none', val !== 'single');
+    document.getElementById('customPhoneDiv').classList.toggle('d-none', val !== 'custom');
+}
+
+function countChars(textarea) {
+    const len = textarea.value.length;
+    const smsCount = Math.ceil(len / 160) || 1;
+    document.getElementById('charCounter').innerText = `Herufi: ${len} / 160 (SMS ${smsCount})`;
+}
+</script>
 {% endblock %}
