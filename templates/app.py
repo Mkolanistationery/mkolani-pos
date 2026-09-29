@@ -6,7 +6,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'mkolani-secret-key-2026')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///mkolani_pos.db')
+
+# DATABASE CONFIGURATION (Inasaidia SQLite na PostgreSQL ya Render)
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///mkolani_pos.db')
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -29,7 +35,14 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# HAKIKISHA UTAMBULISHO WA ENDPOINTS UPO KWENYE BASE TEMPLATE
+# UTENGENEZAJI WA TABLES YA DATABASE KIOTOMATIKI
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+
+# HAKIKISHA ENDPOINTS ZOTE ZINAPATIKANA KWENYE TEMPLATES
 @app.context_processor
 def inject_endpoints():
     return dict(endpoints=[rule.endpoint for rule in app.url_map.iter_rules()])
@@ -41,68 +54,82 @@ def index():
         return render_template('dashboard.html')
     return render_template('base.html')
 
-# 2. ROUTE YA KUSAJILI BIASHARA MPYA (REGISTER)
+# 2. ROUTE YA KUSAJILI BIASHARA MPYA (REGISTER - MOJA KWA MOJA DASHBOARD)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        business_name = request.form.get('business_name')
-        owner_name = request.form.get('owner_name')
-        phone = request.form.get('phone')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        business_type = request.form.get('business_type', 'retail')
+        try:
+            business_name = request.form.get('business_name')
+            owner_name = request.form.get('owner_name')
+            phone = request.form.get('phone')
+            email = request.form.get('email', '').lower().strip()
+            password = request.form.get('password')
+            business_type = request.form.get('business_type', 'retail')
 
-        # Angalia kama email ipo tayari
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            flash('Barua pepe hii tayari imeshasajiliwa! Tafadhali ingia au tumia email nyingine.', 'danger')
+            if not email or not password or not business_name:
+                flash('Tafadhali jaza taarifa zote zinazohitajika.', 'danger')
+                return redirect(url_for('register'))
+
+            # Angalia kama email ipo tayari
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                flash('Barua pepe hii tayari imeshasajiliwa! Tafadhali ingia.', 'warning')
+                return redirect(url_for('login'))
+
+            # Hash Password kwa njia salama na inayokubalika sehemu zote (pbkdf2:sha256)
+            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+
+            new_user = User(
+                business_name=business_name,
+                owner_name=owner_name,
+                phone=phone,
+                email=email,
+                password=hashed_password,
+                business_type=business_type
+            )
+
+            db.session.add(new_user)
+            db.session.commit()
+
+            # INGIZA MTUMIAJI MOJA KWA MOJA KWENYE MFUMO (AUTO LOGIN)
+            login_user(new_user)
+            flash(f'Hongera {business_name}! Usajili umekamilika. Karibu kwenye Mkolani POS!', 'success')
+            return redirect(url_for('index'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash('Kuna tatizo limetokea wakati wa usajili. Tafadhali jaribu tena.', 'danger')
+            print(f"Registration Error: {e}")
             return redirect(url_for('register'))
-
-        # Hifadhi mtumiaji mpya
-        hashed_password = generate_password_hash(password, method='scrypt')
-        new_user = User(
-            business_name=business_name,
-            owner_name=owner_name,
-            phone=phone,
-            email=email,
-            password=hashed_password,
-            business_type=business_type
-        )
-
-        db.session.add(new_user)
-        db.session.commit()
-
-        # Ingiza mtumiaji moja kwa moja
-        login_user(new_user)
-        flash('Hongera! Biashara yako imesajiliwa kikamilifu.', 'success')
-        return redirect(url_for('index'))
 
     return render_template('register.html')
 
-# 3. ROUTE YA LOG IN
+# 3. ROUTE YA LOG IN (INGIA KWENYE MFUMO)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        email = request.form.get('email')
+        email = request.form.get('email', '').lower().strip()
         password = request.form.get('password')
 
         user = User.query.filter_by(email=email).first()
+
         if user and check_password_hash(user.password, password):
             login_user(user)
             flash('Karibu tena kwenye Mkolani POS!', 'success')
             return redirect(url_for('index'))
         else:
             flash('Barua pepe au Neno la Siri sio sahihi.', 'danger')
+            return redirect(url_for('login'))
 
-    return redirect(url_for('index'))
+    return render_template('login.html')
 
-# 4. ROUTE YA LOGOUT
+# 4. ROUTE YA LOGOUT (TOKA KWENYE MFUMO)
 @app.route('/logout')
 @login_required
 def logout():
@@ -114,8 +141,7 @@ def logout():
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        email = request.form.get('email')
-        flash('Ombi lako limepokelewa. Wasiliana na msaada kwa wateja kupitia WhatsApp (+255 625 567 603) kwa usaidizi wa haraka.', 'info')
+        flash('Ombi lako limepokelewa. Wasiliana na msaada kupitia WhatsApp (+255 625 567 603) kwa usaidizi wa haraka.', 'info')
         return redirect(url_for('index'))
     return redirect(url_for('index'))
 
@@ -169,6 +195,4 @@ def admin_dashboard():
     return render_template('admin.html')
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
