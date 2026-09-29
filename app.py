@@ -165,23 +165,24 @@ def sales():
     customers_list = Customer.query.filter_by(user_id=current_user.id).all()
     return render_template('sales.html', customers_list=customers_list)
 
-# ROUTE YA SMS CENTER (BULK SMS & BRANDING)
 @app.route('/sms-center', methods=['GET', 'POST'])
 @login_required
 def sms_center():
     if request.method == 'POST':
-        recipient_type = request.form.get('recipient_type')
         message = request.form.get('message')
-        
         if not message:
             flash('Tafadhali andika ujumbe wa SMS.', 'warning')
             return redirect(url_for('sms_center'))
             
-        # Hapa SMS inatumwa (Inaunganishwa na SMS Gateway)
         flash('Ujumbe wako wa SMS umetumwa kikamilifu!', 'success')
         return redirect(url_for('sms_center'))
 
-    customers_list = Customer.query.filter_by(user_id=current_user.id).all()
+    try:
+        customers_list = Customer.query.filter_by(user_id=current_user.id).all()
+    except Exception as e:
+        customers_list = []
+        print(f"Error fetching customers: {e}")
+
     return render_template('sms_center.html', customers_list=customers_list)
 
 @app.route('/customers', methods=['GET', 'POST'])
