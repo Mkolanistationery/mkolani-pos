@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Mkolani Business Portal | Enterprise Management System{% endblock %}</title>
+    <title>{% block title %}Mkolani Business Portal | Mfumo Mkuu wa Risiti na Usimamizi wa Biashara{% endblock %}</title>
 
     <!-- Google Fonts & Bootstrap 5 -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,6 +14,8 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f6f9; }
         html { scroll-behavior: smooth; }
         .fs-7 { font-size: 0.8rem; }
+        .lang-btn { cursor: pointer; opacity: 0.8; transition: all 0.2s ease; }
+        .lang-btn:hover, .lang-btn.active { opacity: 1; font-weight: bold; text-decoration: underline; }
         
         /* SIDEBAR STYLING SMART YA NDANI */
         {% if current_user.is_authenticated %}
@@ -166,7 +168,7 @@
             <div class="d-flex align-items-center gap-3">
                 <div class="balance-card d-flex align-items-center gap-2">
                     <i class="bi bi-chat-left-dots text-warning"></i>
-                    <span class="small">SMS Balance: <strong>108</strong></span>
+                    <span class="small">Salio la SMS: <strong>108</strong></span>
                 </div>
                 <a href="{{ url_for('profile') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                     <i class="bi bi-gear me-1"></i> Mipangilio
@@ -190,16 +192,19 @@
 
     {% else %}
     <!-- ========================================================= -->
-    <!-- B. PUBLIC PORTAL (PORTAL FORMAT - BIASHARA & TAASISI TZ)   -->
+    <!-- B. PUBLIC PORTAL (KISWAHILI SWAFI + LANGUAGE SWITCHER)    -->
     <!-- ========================================================= -->
 
     <!-- TOP HEADER -->
     <div class="bg-dark text-white py-1 px-3 fs-7">
         <div class="container d-flex justify-content-between align-items-center">
-            <small>
-                <strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Mfumo wa Risiti & Usimamizi wa Biashara na Taasisi | Hotline: +255 625 567 603
+            <small id="topHeaderInfo">
+                <strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Mfumo Rasmi wa Utoaji Risiti & Usimamizi wa Biashara na Taasisi | Hotline: +255 625 567 603
             </small>
-            <small>🇹🇿 Swahili | 🇬🇧 English</small>
+            <small>
+                <span class="lang-btn active" id="langSw" onclick="setLanguage('sw')">🇹🇿 Swahili</span> | 
+                <span class="lang-btn" id="langEn" onclick="setLanguage('en')">🇬🇧 English</span>
+            </small>
         </div>
     </div>
 
@@ -208,22 +213,22 @@
         <div class="container">
             <a class="navbar-brand fw-bold text-primary fs-4" href="/">
                 Mkolani Enterprise Portal
-                <span class="d-block text-muted fs-7 fw-normal">Smart POS, School Fees, Loans & Institutional Receipts Agency</span>
+                <span class="d-block text-muted fs-7 fw-normal" id="navSubtitle">Mfumo wa Risiti za Mashine, Ada za Shule, Mikopo na Taasisi</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="publicNav">
                 <ul class="navbar-nav me-auto ms-lg-4 mb-2 mb-lg-0 fw-semibold">
-                    <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#services">Mauzo & Risiti</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#services">Shule & Mikopo</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#tracker">Track Receipt</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#faq">FAQ & Support</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="#" id="navHome">Nyumbani</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services" id="navServicesSales">Mauzo & Risiti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services" id="navServicesSchool">Shule & Mikopo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#tracker" id="navTrack">Fuatilia Risiti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#faq" id="navFaq">Msaada & Maswali</a></li>
                 </ul>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4">Sign in</a>
-                    <a href="{{ url_for('register') }}" class="btn btn-primary rounded-pill px-4">Register Account</a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4" id="btnSignIn">Ingia Mfumoni</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary rounded-pill px-4" id="btnRegister">Sajili Biashara</a>
                 </div>
             </div>
         </div>
@@ -248,47 +253,47 @@
             <div class="container">
                 <div class="row align-items-center g-4">
                     <div class="col-lg-7">
-                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Official All-in-One Business & Institutional Portal</span>
-                        <h1 class="display-5 fw-bold text-dark mb-3">Mkolani Services with Speed, Security and Ease</h1>
-                        <p class="lead text-muted mb-4">Mfumo kamili wa utoaji risiti za mashine, usimamizi wa maduka, shule, mikopo, na taasisi zote Tanzania. Sign in to your account or create a new account to get started.</p>
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3" id="heroBadge">Mfumo Rasmi na Mkabidhi wa Kibiashara na Taasisi</span>
+                        <h1 class="display-5 fw-bold text-dark mb-3" id="heroTitle">Endesha Biashara, Shule na Taasisi Yako kwa Kasi, Usalama na Urahisi wa Hali ya Juu</h1>
+                        <p class="lead text-muted mb-4" id="heroDesc">Ondoa wizi na upotevu wa mapato. Toa risiti za mashine (Thermal POS) zenye logo yako, simamia ada za wanafunzi, fuatilia mikopo na marejesho, na tuma SMS za matangazo kwa wateja wote nchini Tanzania. Ingia kwenye akaunti yako au sajili biashara mpya kuanza sasa.</p>
                         
                         <div class="row text-center g-3 pt-3 border-top">
                             <div class="col-4">
                                 <h4 class="fw-bold text-primary mb-0">1.2M+</h4>
-                                <small class="text-muted">Digital Receipts Generated</small>
+                                <small class="text-muted" id="stat1">Risiti Zilizotolewa</small>
                             </div>
                             <div class="col-4">
-                                <h4 class="fw-bold text-primary mb-0">&lt; 1 SEC</h4>
-                                <small class="text-muted">Average Receipt Printing Time</small>
+                                <h4 class="fw-bold text-primary mb-0">&lt; Sek 1</h4>
+                                <small class="text-muted" id="stat2">Kasi ya Kutoa Risiti</small>
                             </div>
                             <div class="col-4">
                                 <h4 class="fw-bold text-primary mb-0">24/7</h4>
-                                <small class="text-muted">Customer & GePG Payment Support</small>
+                                <small class="text-muted" id="stat3">Msaada wa Malipo na Mtandao</small>
                             </div>
                         </div>
                     </div>
                     
                     <div class="col-lg-5">
                         <div class="card border-0 shadow-lg p-4 rounded-4">
-                            <h5 class="fw-bold text-dark mb-1">Welcome back</h5>
-                            <p class="text-muted small mb-3">Please key in your registered system credentials below to verify your identity.</p>
+                            <h5 class="fw-bold text-dark mb-1" id="loginHeader">Karibu Tena</h5>
+                            <p class="text-muted small mb-3" id="loginSubHeader">Tafadhali ingiza barua pepe na neno lako la siri ili kuingia kwenye mfumo.</p>
                             
                             <form action="{{ url_for('login') }}" method="POST">
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Email</label>
-                                    <input type="email" name="email" class="form-control" placeholder="name@domain.com" required>
+                                    <label class="form-label small fw-semibold" id="labelEmail">Barua Pepe (Email)</label>
+                                    <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Password</label>
+                                    <label class="form-label small fw-semibold" id="labelPassword">Neno la Siri (Password)</label>
                                     <input type="password" name="password" class="form-control" placeholder="••••••••" required>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none small">Forgot password?</a>
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none small" id="linkForgot">Umesahau Neno la Siri?</a>
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">Sign in</button>
+                                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3" id="btnSubmitLogin">INGIA KWENYE MFUMO</button>
                                 
                                 <div class="text-center">
-                                    <small class="text-muted">Don't have an account? <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none">Register here</a></small>
+                                    <small class="text-muted" id="textNoAccount">Huna akaunti bado? <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none" id="linkRegister">Sajili Biashara Hapa</a></small>
                                 </div>
                             </form>
                         </div>
@@ -301,81 +306,81 @@
         <section id="services" class="py-5">
             <div class="container">
                 <div class="text-center mb-5">
-                    <h6 class="text-primary text-uppercase fw-bold">SERVICES & ENTERPRISE TOOLS</h6>
-                    <h2 class="fw-bold text-dark">Available Services & Applicable Features</h2>
-                    <p class="text-muted">Select a service category below to view features, management tools, and start your enterprise workflow.</p>
+                    <h6 class="text-primary text-uppercase fw-bold" id="servicesCategoryHeader">HUDUMA NA ZANA ZA KIBIASHARA</h6>
+                    <h2 class="fw-bold text-dark" id="servicesTitleHeader">Huduma Zilizopo na Zana za Kazi</h2>
+                    <p class="text-muted" id="servicesSubTitleHeader">Chagua huduma unayohitaji hapa chini ili kuona uwezo wake na kuanza kuitumia kwenye biashara yako.</p>
                 </div>
                 
                 <div class="row g-4">
                     <!-- Mauzo na Risiti -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Commercial Operations</span>
-                            <h5 class="fw-bold text-dark">POS & Utoaji Risiti za Mashine</h5>
-                            <p class="text-muted small">Kutoa risiti za mashine ndogo za POS (Thermal 58mm/80mm), kusimamia mauzo ya kila siku, na kuweka logo ya duka lako.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start" id="badge1">Uendeshaji wa Biashara</span>
+                            <h5 class="fw-bold text-dark" id="card1Title">POS & Utoaji Risiti za Mashine</h5>
+                            <p class="text-muted small" id="card1Desc">Toa risiti zenye nembo/logo ya duka lako kwa kutumia mashine ndogo za POS (Thermal 58mm/80mm), udhibiti mauzo ya kila siku na uzuie wizi.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Logo kwenye Risiti, Stoko, Duka la Rejareja & Jumla.</p>
-                            <p class="fw-bold text-primary mb-0">Status: Inafanya Kazi 100%</p>
+                            <p class="small text-muted mb-1"><strong id="card1FeatTitle">Vipengele:</strong> <span id="card1Feat">Logo kwenye Risiti, Udhibiti wa Stoko, Duka la Rejareja & Jumla.</span></p>
+                            <p class="fw-bold text-primary mb-0" id="card1Status">Hali: Inafanya Kazi 100%</p>
                         </div>
                     </div>
 
                     <!-- Usimamizi wa Shule -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Educational Institutions</span>
-                            <h5 class="fw-bold text-dark">Usimamizi wa Ada & Shule</h5>
-                            <p class="text-muted small">Kutoa risiti za Ada kwa wanafunzi, kusimamia taarifa za wazazi, na kutuma SMS za matokeo au vikumbusho vya ada.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start" id="badge2">Taasisi za Elimu</span>
+                            <h5 class="fw-bold text-dark" id="card2Title">Usimamizi wa Ada & Shule</h5>
+                            <p class="text-muted small" id="card2Desc">Toa risiti za Ada kwa wanafunzi, hifadhi rekodi za wazazi, na tuma SMS za matokeo au vikumbusho vya ada kiotomatiki.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Risiti za Ada, Mfumo wa SMS kwa Wazazi, Rekodi za Shule.</p>
-                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
+                            <p class="small text-muted mb-1"><strong id="card2FeatTitle">Vipengele:</strong> <span id="card2Feat">Risiti za Ada, SMS kwa Wazazi, Kumbukumbu za Wanafunzi.</span></p>
+                            <p class="fw-bold text-primary mb-0" id="card2Status">Hali: Tayari Kutumika</p>
                         </div>
                     </div>
 
                     <!-- Usimamizi wa Mikopo -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Financial & Microfinance</span>
-                            <h5 class="fw-bold text-dark">Mikopo, Taasisi & Madeni</h5>
-                            <p class="text-muted small">Kusajili mikopo ya wateja, kuhesabu riba, kutoa risiti za marejesho, na kuwakumbusha wakopaji kwa SMS.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start" id="badge3">Taasisi za Mikopo & Fedha</span>
+                            <h5 class="fw-bold text-dark" id="card3Title">Mikopo, Vikundi & Madeni</h5>
+                            <p class="text-muted small" id="card3Desc">Sajili wakopaji, kokotoa riba na marejesho ya kila siku/mwezi, toa risiti za marejesho na tuma SMS za kumbukumbu.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Vikundi vya Mikopo, Hesabu za Riba, Risiti za Marejesho.</p>
-                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
+                            <p class="small text-muted mb-1"><strong id="card3FeatTitle">Vipengele:</strong> <span id="card3Feat">Vikundi vya Mikopo, Hesabu za Riba, Risiti za Marejesho.</span></p>
+                            <p class="fw-bold text-primary mb-0" id="card3Status">Hali: Tayari Kutumika</p>
                         </div>
                     </div>
 
                     <!-- Receipt Verification -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Public Online Tool</span>
-                            <h5 class="fw-bold text-dark">Uhakiki wa Risiti Mtandaoni</h5>
-                            <p class="text-muted small">Mteja au mhakiki anaweza kuingiza namba ya risiti ili kuhakiki kama imetolewa na biashara/taasisi yako halali.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start" id="badge4">Zana ya Uhakiki</span>
+                            <h5 class="fw-bold text-dark" id="card4Title">Uhakiki wa Risiti Mtandaoni</h5>
+                            <p class="text-muted small" id="card4Desc">Mteja au mhakiki anaweza kuingiza namba ya risiti mtandaoni kuhakiki kama imetolewa na biashara au taasisi yako halali.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Required Numbers:</strong> Application Reference Code au Control Number.</p>
-                            <p class="fw-bold text-success mb-0">Fee: Free</p>
+                            <p class="small text-muted mb-1"><strong id="card4FeatTitle">Taarifa Zinazohitajika:</strong> <span id="card4Feat">Namba ya Risiti au Application Reference Code.</span></p>
+                            <p class="fw-bold text-success mb-0" id="card4Status">Gharama: Bure</p>
                         </div>
                     </div>
 
                     <!-- Bulk SMS & CRM -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Marketing & CRM</span>
-                            <h5 class="fw-bold text-dark">SMS Center & Branding</h5>
-                            <p class="text-muted small">Tuma matangazo ya biashara kwa wateja wote, tuma risiti za SMS, na jenga mahusiano mema na wateja wako.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start" id="badge5">Matangazo & CRM</span>
+                            <h5 class="fw-bold text-dark" id="card5Title">SMS Center & Utangazaji</h5>
+                            <p class="text-muted small" id="card5Desc">Tuma SMS za matangazo kwa wateja wako wote kwa mpigo, tuma risiti za simu, na jenga mahusiano thabiti na wateja wako.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Bulk SMS Gateway, Wateja CRM, Custom Sender ID.</p>
-                            <p class="fw-bold text-primary mb-0">Status: Inafanya Kazi</p>
+                            <p class="small text-muted mb-1"><strong id="card5FeatTitle">Vipengele:</strong> <span id="card5Feat">Bulk SMS Gateway, Wateja CRM, Sender ID Yako.</span></p>
+                            <p class="fw-bold text-primary mb-0" id="card5Status">Hali: Inafanya Kazi</p>
                         </div>
                     </div>
 
                     <!-- Stoko na Matumizi -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Inventory Control</span>
-                            <h5 class="fw-bold text-dark">Stoko & Taarifa za Matumizi</h5>
-                            <p class="text-muted small">Fuatilia bidhaa zinazoisha, zuia wizi dukani au taasisi, na unganisha taarifa zote za mapato na matumizi.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start" id="badge6">Udhibiti wa Stoko</span>
+                            <h5 class="fw-bold text-dark" id="card6Title">Stoko & Taarifa za Matumizi</h5>
+                            <p class="text-muted small" id="card6Desc">Pata taarifa za bidhaa zinazoisha, zuia wizi wa mali dukani au taasisini, na unganisha taarifa za mapato na matumizi.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Alerts za Stoko, Kurekodi Matumizi, Ripoti za Faida.</p>
-                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
+                            <p class="small text-muted mb-1"><strong id="card6FeatTitle">Vipengele:</strong> <span id="card6Feat">Alerts za Stoko, Kurekodi Matumizi, Ripoti za Faida.</span></p>
+                            <p class="fw-bold text-primary mb-0" id="card6Status">Hali: Tayari Kutumika</p>
                         </div>
                     </div>
                 </div>
@@ -387,19 +392,19 @@
             <div class="container">
                 <div class="row justify-content-center">
                     <div class="col-md-8 text-center">
-                        <h6 class="text-primary text-uppercase fw-bold">RECEIPT & TRANSACTION TRACKER</h6>
-                        <h3 class="fw-bold text-dark mb-2">Track Receipt or Application Status</h3>
-                        <p class="text-muted small mb-4">Enter both Receipt Reference Code and Payment Control Number to check status.</p>
+                        <h6 class="text-primary text-uppercase fw-bold" id="trackerSub">UFUATILIAJI WA RISITI NA TRANSACTIONS</h6>
+                        <h3 class="fw-bold text-dark mb-2" id="trackerTitle">Fuatilia Au Hakiki Risiti Yako</h3>
+                        <p class="text-muted small mb-4" id="trackerDesc">Ingiza Namba ya Risiti na Namba ya Malipo/Kumbukumbu ili kuhakiki taarifa zake.</p>
                         
-                        <form class="row g-3 justify-content-center" onsubmit="event.preventDefault(); alert('Checking receipt verification status...');">
+                        <form class="row g-3 justify-content-center" onsubmit="event.preventDefault(); alert('Inahakiki taarifa za risiti yako...');">
                             <div class="col-md-5">
-                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Receipt / Reference Code" required>
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Namba ya Risiti / Reference Code" id="inputReceiptNo" required>
                             </div>
                             <div class="col-md-5">
-                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="GePG / Payment Control No" required>
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Namba ya Malipo / Control No" id="inputControlNo" required>
                             </div>
                             <div class="col-md-10">
-                                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">Track Status</button>
+                                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold" id="btnTrackNow">HAKIKI RISITI SASA</button>
                             </div>
                         </form>
                     </div>
@@ -411,8 +416,8 @@
         <section id="faq" class="py-5">
             <div class="container">
                 <div class="text-center mb-5">
-                    <h2 class="fw-bold text-dark">Frequently Asked Questions (FAQ)</h2>
-                    <p class="text-muted">Get quick answers about using Mkolani Enterprise Portal and receipt printing.</p>
+                    <h2 class="fw-bold text-dark" id="faqHeader">Maswali Yanayoulizwa Mara kwa Mara (FAQ)</h2>
+                    <p class="text-muted" id="faqSubHeader">Pata majibu ya haraka kuhusu matumizi ya Mkolani Portal na utoaji wa risiti.</p>
                 </div>
                 
                 <div class="row justify-content-center">
@@ -420,12 +425,12 @@
                         <div class="accordion shadow-sm rounded-3 overflow-hidden" id="faqAccordion">
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                    <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" id="faqq1">
                                         1. Nawezaje kutoa risiti za biashara au ada ya shule mtandaoni?
                                     </button>
                                 </h2>
                                 <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
+                                    <div class="accordion-body text-muted small" id="faqa1">
                                         Ingia kwenye akaunti yako, chagua sehemu ya Mauzo au Ada, ingiza taarifa kisha bonyeza 'Print Risiti'. Unaweza pia kuweka Logo ya duka au taasisi yako.
                                     </div>
                                 </div>
@@ -433,12 +438,12 @@
 
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" id="faqq2">
                                         2. Je, mfumo unasaidia mashine ndogo za POS (Thermal Printers)?
                                     </button>
                                 </h2>
                                 <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
+                                    <div class="accordion-body text-muted small" id="faqa2">
                                         Ndiyo, mfumo umetengenezwa kwa ajili ya ku-print risiti za 58mm na 80mm kupitia Bluetooth, USB, au Wi-Fi Thermal POS printers.
                                     </div>
                                 </div>
@@ -446,12 +451,12 @@
 
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                    <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" id="faqq3">
                                         3. Je, inafaa kwa ajili ya taasisi za mikopo na shule?
                                     </button>
                                 </h2>
                                 <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body text-muted small">
+                                    <div class="accordion-body text-muted small" id="faqa3">
                                         Ndiyo, Mkolani Enterprise Portal inasaidia usimamizi wa mikopo, ada za shule, stoko, na usimamizi wa wateja kote nchini Tanzania.
                                     </div>
                                 </div>
@@ -468,19 +473,19 @@
                 <div class="modal-content rounded-4 border-0 shadow">
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold text-dark" id="forgotPasswordModalLabel">
-                            <i class="bi bi-key-fill text-warning me-2"></i>Reset Password
+                            <i class="bi bi-key-fill text-warning me-2"></i>Weka Upya Neno la Siri
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4">
-                        <p class="text-muted small mb-3">Enter your registered email address below to receive password reset instructions.</p>
+                        <p class="text-muted small mb-3" id="forgotModalDesc">Ingiza barua pepe yako uliyosajilia ili kupokea maelekezo ya kubadilisha neno lako la siri.</p>
                         
-                        <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Reset link sent to your email.');">
+                        <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Maelekezo yametumwa kwenye barua pepe yako.');">
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">Email</label>
-                                <input type="email" name="email" class="form-control" placeholder="name@domain.com" required>
+                                <label class="form-label small fw-semibold" id="labelForgotEmail">Barua Pepe (Email)</label>
+                                <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">Send Instructions</button>
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3" id="btnSendForgot">TUMA MAELEKEZO</button>
                         </form>
                     </div>
                 </div>
@@ -494,26 +499,26 @@
                     <div class="col-md-4">
                         <h5 class="fw-bold text-primary mb-2">Mkolani Management</h5>
                         <h6 class="fw-bold mb-3">e-Mkolani Enterprise Portal</h6>
-                        <p class="text-muted small">Mfumo rasmi wa utoaji risiti za digitali, usimamizi wa biashara, ada za shule, mikopo, na huduma za CRM kwa taasisi zote Tanzania.</p>
+                        <p class="text-muted small" id="footerDesc">Mfumo rasmi wa utoaji risiti za digitali, usimamizi wa biashara, ada za shule, mikopo, na huduma za CRM kwa taasisi zote Tanzania.</p>
                     </div>
                     <div class="col-md-3">
-                        <h6 class="fw-bold mb-3">Quick Links</h6>
+                        <h6 class="fw-bold mb-3" id="footerQuickTitle">Viungo vya Haraka</h6>
                         <ul class="list-unstyled text-muted small">
-                            <li class="mb-1"><a href="#" class="text-muted text-decoration-none">Home</a></li>
-                            <li class="mb-1"><a href="#services" class="text-muted text-decoration-none">Services</a></li>
-                            <li class="mb-1"><a href="#tracker" class="text-muted text-decoration-none">Track Status</a></li>
-                            <li class="mb-1"><a href="#faq" class="text-muted text-decoration-none">FAQ & Support</a></li>
+                            <li class="mb-1"><a href="#" class="text-muted text-decoration-none" id="fLink1">Nyumbani</a></li>
+                            <li class="mb-1"><a href="#services" class="text-muted text-decoration-none" id="fLink2">Huduma Zetu</a></li>
+                            <li class="mb-1"><a href="#tracker" class="text-muted text-decoration-none" id="fLink3">Fuatilia Risiti</a></li>
+                            <li class="mb-1"><a href="#faq" class="text-muted text-decoration-none" id="fLink4">Msaada & Maswali</a></li>
                         </ul>
                     </div>
                     <div class="col-md-3">
-                        <h6 class="fw-bold mb-3">Head Office Contacts</h6>
+                        <h6 class="fw-bold mb-3" id="footerContactTitle">Mawasiliano Makuu</h6>
                         <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-2"></i>Mkolani, Mwanza, Tanzania</p>
                         <p class="text-muted small mb-1"><i class="bi bi-telephone me-2"></i>+255 625 567 603</p>
                         <p class="text-muted small mb-1"><i class="bi bi-envelope me-2"></i>info@mkolanipos.co.tz</p>
                     </div>
                     <div class="col-md-2">
-                        <h6 class="fw-bold mb-3">Payments Supported</h6>
-                        <p class="text-muted small mb-2">Mfumo unasaidia malipo yote ya simu na benki kwa haraka.</p>
+                        <h6 class="fw-bold mb-3" id="footerPayTitle">Malipo Yatakayopokelewa</h6>
+                        <p class="text-muted small mb-2" id="footerPayDesc">Mfumo unasaidia malipo yote ya simu na benki kwa haraka.</p>
                         <div class="d-flex gap-1 flex-wrap">
                             <span class="badge bg-secondary">M-PESA</span>
                             <span class="badge bg-secondary">TIGO PESA</span>
@@ -522,7 +527,7 @@
                     </div>
                 </div>
                 <hr class="border-secondary">
-                <p class="text-center text-muted small mb-0">&copy; 2026 Mkolani Enterprise Portal. All rights reserved.</p>
+                <p class="text-center text-muted small mb-0">&copy; 2026 Mkolani Enterprise Portal. Haki zote zimehifadhiwa.</p>
             </div>
         </footer>
         {% endblock %}
@@ -531,6 +536,274 @@
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- SCRIPT YA LANGUAGE SWITCHER (KISWAHILI & ENGLISH) -->
+    <script>
+        const translations = {
+            sw: {
+                topHeaderInfo: "<strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Mfumo Rasmi wa Utoaji Risiti & Usimamizi wa Biashara na Taasisi | Hotline: +255 625 567 603",
+                navSubtitle: "Mfumo wa Risiti za Mashine, Ada za Shule, Mikopo na Taasisi",
+                navHome: "Nyumbani",
+                navServicesSales: "Mauzo & Risiti",
+                navServicesSchool: "Shule & Mikopo",
+                navTrack: "Fuatilia Risiti",
+                navFaq: "Msaada & Maswali",
+                btnSignIn: "Ingia Mfumoni",
+                btnRegister: "Sajili Biashara",
+                heroBadge: "Mfumo Rasmi na Mkabidhi wa Kibiashara na Taasisi",
+                heroTitle: "Endesha Biashara, Shule na Taasisi Yako kwa Kasi, Usalama na Urahisi wa Hali ya Juu",
+                heroDesc: "Ondoa wizi na upotevu wa mapato. Toa risiti za mashine (Thermal POS) zenye logo yako, simamia ada za wanafunzi, fuatilia mikopo na marejesho, na tuma SMS za matangazo kwa wateja wote nchini Tanzania. Ingia kwenye akaunti yako au sajili biashara mpya kuanza sasa.",
+                stat1: "Risiti Zilizotolewa",
+                stat2: "Kasi ya Kutoa Risiti",
+                stat3: "Msaada wa Malipo na Mtandao",
+                loginHeader: "Karibu Tena",
+                loginSubHeader: "Tafadhali ingiza barua pepe na neno lako la siri ili kuingia kwenye mfumo.",
+                labelEmail: "Barua Pepe (Email)",
+                labelPassword: "Neno la Siri (Password)",
+                linkForgot: "Umesahau Neno la Siri?",
+                btnSubmitLogin: "INGIA KWENYE MFUMO",
+                textNoAccount: 'Huna akaunti bado? <a href="{{ url_for("register") }}" class="text-primary fw-bold text-decoration-none">Sajili Biashara Hapa</a>',
+                servicesCategoryHeader: "HUDUMA NA ZANA ZA KIBIASHARA",
+                servicesTitleHeader: "Huduma Zilizopo na Zana za Kazi",
+                servicesSubTitleHeader: "Chagua huduma unayohitaji hapa chini ili kuona uwezo wake na kuanza kuitumia kwenye biashara yako.",
+                badge1: "Uendeshaji wa Biashara",
+                card1Title: "POS & Utoaji Risiti za Mashine",
+                card1Desc: "Toa risiti zenye nembo/logo ya duka lako kwa kutumia mashine ndogo za POS (Thermal 58mm/80mm), udhibiti mauzo ya kila siku na uzuie wizi.",
+                card1FeatTitle: "Vipengele:",
+                card1Feat: "Logo kwenye Risiti, Udhibiti wa Stoko, Duka la Rejareja & Jumla.",
+                card1Status: "Hali: Inafanya Kazi 100%",
+                badge2: "Taasisi za Elimu",
+                card2Title: "Usimamizi wa Ada & Shule",
+                card2Desc: "Toa risiti za Ada kwa wanafunzi, hifadhi rekodi za wazazi, na tuma SMS za matokeo au vikumbusho vya ada kiotomatiki.",
+                card2FeatTitle: "Vipengele:",
+                card2Feat: "Risiti za Ada, SMS kwa Wazazi, Kumbukumbu za Wanafunzi.",
+                card2Status: "Hali: Tayari Kutumika",
+                badge3: "Taasisi za Mikopo & Fedha",
+                card3Title: "Mikopo, Vikundi & Madeni",
+                card3Desc: "Sajili wakopaji, kokotoa riba na marejesho ya kila siku/mwezi, toa risiti za marejesho na tuma SMS za kumbukumbu.",
+                card3FeatTitle: "Vipengele:",
+                card3Feat: "Vikundi vya Mikopo, Hesabu za Riba, Risiti za Marejesho.",
+                card3Status: "Hali: Tayari Kutumika",
+                badge4: "Zana ya Uhakiki",
+                card4Title: "Uhakiki wa Risiti Mtandaoni",
+                card4Desc: "Mteja au mhakiki anaweza kuingiza namba ya risiti mtandaoni kuhakiki kama imetolewa na biashara au taasisi yako halali.",
+                card4FeatTitle: "Taarifa Zinazohitajika:",
+                card4Feat: "Namba ya Risiti au Application Reference Code.",
+                card4Status: "Gharama: Bure",
+                badge5: "Matangazo & CRM",
+                card5Title: "SMS Center & Utangazaji",
+                card5Desc: "Tuma SMS za matangazo kwa wateja wako wote kwa mpigo, tuma risiti za simu, na jenga mahusiano thabiti na wateja wako.",
+                card5FeatTitle: "Vipengele:",
+                card5Feat: "Bulk SMS Gateway, Wateja CRM, Sender ID Yako.",
+                card5Status: "Hali: Inafanya Kazi",
+                badge6: "Udhibiti wa Stoko",
+                card6Title: "Stoko & Taarifa za Matumizi",
+                card6Desc: "Pata taarifa za bidhaa zinazoisha, zuia wizi wa mali dukani au taasisini, na unganisha taarifa za mapato na matumizi.",
+                card6FeatTitle: "Vipengele:",
+                card6Feat: "Alerts za Stoko, Kurekodi Matumizi, Ripoti za Faida.",
+                card6Status: "Hali: Tayari Kutumika",
+                trackerSub: "UFUATILIAJI WA RISITI NA TRANSACTIONS",
+                trackerTitle: "Fuatilia Au Hakiki Risiti Yako",
+                trackerDesc: "Ingiza Namba ya Risiti na Namba ya Malipo/Kumbukumbu ili kuhakiki taarifa zake.",
+                inputReceiptNo: "Namba ya Risiti / Reference Code",
+                inputControlNo: "Namba ya Malipo / Control No",
+                btnTrackNow: "HAKIKI RISITI SASA",
+                faqHeader: "Maswali Yanayoulizwa Mara kwa Mara (FAQ)",
+                faqSubHeader: "Pata majibu ya haraka kuhusu matumizi ya Mkolani Portal na utoaji wa risiti.",
+                faqq1: "1. Nawezaje kutoa risiti za biashara au ada ya shule mtandaoni?",
+                faqa1: "Ingia kwenye akaunti yako, chagua sehemu ya Mauzo au Ada, ingiza taarifa kisha bonyeza 'Print Risiti'. Unaweza pia kuweka Logo ya duka au taasisi yako.",
+                faqq2: "2. Je, mfumo unasaidia mashine ndogo za POS (Thermal Printers)?",
+                faqa2: "Ndiyo, mfumo umetengenezwa kwa ajili ya ku-print risiti za 58mm na 80mm kupitia Bluetooth, USB, au Wi-Fi Thermal POS printers.",
+                faqq3: "3. Je, inafaa kwa ajili ya taasisi za mikopo na shule?",
+                faqa3: "Ndiyo, Mkolani Enterprise Portal inasaidia usimamizi wa mikopo, ada za shule, stoko, na usimamizi wa wateja kote nchini Tanzania.",
+                footerDesc: "Mfumo rasmi wa utoaji risiti za digitali, usimamizi wa biashara, ada za shule, mikopo, na huduma za CRM kwa taasisi zote Tanzania.",
+                footerQuickTitle: "Viungo vya Haraka",
+                footerContactTitle: "Mawasiliano Makuu",
+                footerPayTitle: "Malipo Yatakayopokelewa",
+                footerPayDesc: "Mfumo unasaidia malipo yote ya simu na benki kwa haraka."
+            },
+            en: {
+                topHeaderInfo: "<strong>UNITED REPUBLIC OF TANZANIA</strong> | Official Receipting & Business Management Agency | Hotline: +255 625 567 603",
+                navSubtitle: "Smart POS Receipts, School Fees, Loans & Institutional Portal",
+                navHome: "Home",
+                navServicesSales: "Sales & Receipts",
+                navServicesSchool: "Schools & Loans",
+                navTrack: "Track Receipt",
+                navFaq: "FAQ & Support",
+                btnSignIn: "Sign In",
+                btnRegister: "Register Account",
+                heroBadge: "Official All-in-One Business & Institutional Portal",
+                heroTitle: "Manage Your Business, School and Institution with Speed, Security and Ease",
+                heroDesc: "Eliminate theft and loss of revenue. Issue custom POS thermal receipts with your business logo, manage school fees, track microfinance loans, and broadcast promotional Bulk SMS across Tanzania. Log in or create a new account to get started.",
+                stat1: "Digital Receipts Generated",
+                stat2: "Average Printing Speed",
+                stat3: "Customer & Network Support",
+                loginHeader: "Welcome Back",
+                loginSubHeader: "Please key in your registered system credentials below to verify your identity.",
+                labelEmail: "Email Address",
+                labelPassword: "Password",
+                linkForgot: "Forgot password?",
+                btnSubmitLogin: "SIGN IN TO PORTAL",
+                textNoAccount: 'Don\'t have an account? <a href="{{ url_for("register") }}" class="text-primary fw-bold text-decoration-none">Register Here</a>',
+                servicesCategoryHeader: "SERVICES & ENTERPRISE TOOLS",
+                servicesTitleHeader: "Available Services & Applicable Features",
+                servicesSubTitleHeader: "Select a service category below to view features, management tools, and start your enterprise workflow.",
+                badge1: "Commercial Operations",
+                card1Title: "POS & Thermal Receipt Printing",
+                card1Desc: "Issue branded receipts with your store logo using 58mm/80mm thermal printers, control daily sales, and prevent internal theft.",
+                card1FeatTitle: "Key Features:",
+                card1Feat: "Custom Receipts Logo, Inventory Alerts, Retail & Wholesale POS.",
+                card1Status: "Status: 100% Operational",
+                badge2: "Educational Institutions",
+                card2Title: "School Fees & Student Management",
+                card2Desc: "Issue official school fee receipts, maintain parent records, and auto-send exam results and fee reminders via SMS.",
+                card2FeatTitle: "Key Features:",
+                card2Feat: "Fee Receipts, Parent SMS Gateway, Student Academic Records.",
+                card2Status: "Status: Ready to Use",
+                badge3: "Financial & Microfinance",
+                card3Title: "Loans, Groups & Debt Management",
+                card3Desc: "Register borrowers, calculate daily/monthly interest, issue repayment receipts, and automate SMS payment reminders.",
+                card3FeatTitle: "Key Features:",
+                card3Feat: "Lending Groups, Interest Calculation, Repayment Receipts.",
+                card3Status: "Status: Ready to Use",
+                badge4: "Public Online Tool",
+                card4Title: "Online Receipt Verification",
+                card4Desc: "Customers and auditors can verify receipt authenticity online using reference codes generated by your business.",
+                card4FeatTitle: "Required Information:",
+                card4Feat: "Receipt Number or Reference Code.",
+                card4Status: "Fee: Free",
+                badge5: "Marketing & CRM",
+                card5Title: "SMS Center & Business Branding",
+                card5Desc: "Broadcast promotional SMS campaigns to all customers, send mobile receipts, and build lasting customer relationships.",
+                card5FeatTitle: "Key Features:",
+                card5Feat: "Bulk SMS Gateway, Customer CRM, Custom Sender ID.",
+                card5Status: "Status: Operational",
+                badge6: "Inventory Control",
+                card6Title: "Stock Control & Expense Tracking",
+                card6Desc: "Receive low stock alerts, prevent inventory loss, and seamlessly reconcile business income and expenses.",
+                card6FeatTitle: "Key Features:",
+                card6Feat: "Stock Alerts, Expense Recording, Profitability Reports.",
+                card6Status: "Status: Ready to Use",
+                trackerSub: "RECEIPT & TRANSACTION TRACKER",
+                trackerTitle: "Track or Verify Your Receipt",
+                trackerDesc: "Enter both Receipt Reference Code and Payment Control Number to check status.",
+                inputReceiptNo: "Receipt / Reference Code",
+                inputControlNo: "Control / Payment Number",
+                btnTrackNow: "VERIFY RECEIPT NOW",
+                faqHeader: "Frequently Asked Questions (FAQ)",
+                faqSubHeader: "Get quick answers about using Mkolani Portal and receipt printing.",
+                faqq1: "1. How do I generate business or school fee receipts online?",
+                faqa1: "Log in to your account, select Sales or School Fees, enter the transaction details, and click 'Print Receipt'. You can also upload your custom business logo.",
+                faqq2: "2. Does the system support small thermal POS printers?",
+                faqa2: "Yes, the system is fully optimized for 58mm and 80mm thermal printers via Bluetooth, USB, or Wi-Fi.",
+                faqq3: "3. Is this system suitable for microfinance loans and schools?",
+                faqa3: "Yes, Mkolani Enterprise Portal provides comprehensive loan tracking, school fee management, inventory control, and customer CRM across Tanzania.",
+                footerDesc: "Official digital receipting, enterprise management, school fees, microfinance loans, and CRM portal for all institutions in Tanzania.",
+                footerQuickTitle: "Quick Links",
+                footerContactTitle: "Head Office Contacts",
+                footerPayTitle: "Supported Payments",
+                footerPayDesc: "System supports all mobile money and bank payments seamlessly."
+            }
+        };
+
+        function setLanguage(lang) {
+            localStorage.setItem('mkolani_portal_lang', lang);
+            
+            // Toggle Active Classes
+            document.getElementById('langSw').classList.toggle('active', lang === 'sw');
+            document.getElementById('langEn').classList.toggle('active', lang === 'en');
+            
+            const t = translations[lang];
+            
+            // Text Replacements
+            document.getElementById('topHeaderInfo').innerHTML = t.topHeaderInfo;
+            document.getElementById('navSubtitle').innerText = t.navSubtitle;
+            document.getElementById('navHome').innerText = t.navHome;
+            document.getElementById('navServicesSales').innerText = t.navServicesSales;
+            document.getElementById('navServicesSchool').innerText = t.navServicesSchool;
+            document.getElementById('navTrack').innerText = t.navTrack;
+            document.getElementById('navFaq').innerText = t.navFaq;
+            document.getElementById('btnSignIn').innerText = t.btnSignIn;
+            document.getElementById('btnRegister').innerText = t.btnRegister;
+            document.getElementById('heroBadge').innerText = t.heroBadge;
+            document.getElementById('heroTitle').innerText = t.heroTitle;
+            document.getElementById('heroDesc').innerText = t.heroDesc;
+            document.getElementById('stat1').innerText = t.stat1;
+            document.getElementById('stat2').innerText = t.stat2;
+            document.getElementById('stat3').innerText = t.stat3;
+            document.getElementById('loginHeader').innerText = t.loginHeader;
+            document.getElementById('loginSubHeader').innerText = t.loginSubHeader;
+            document.getElementById('labelEmail').innerText = t.labelEmail;
+            document.getElementById('labelPassword').innerText = t.labelPassword;
+            document.getElementById('linkForgot').innerText = t.linkForgot;
+            document.getElementById('btnSubmitLogin').innerText = t.btnSubmitLogin;
+            document.getElementById('textNoAccount').innerHTML = t.textNoAccount;
+            document.getElementById('servicesCategoryHeader').innerText = t.servicesCategoryHeader;
+            document.getElementById('servicesTitleHeader').innerText = t.servicesTitleHeader;
+            document.getElementById('servicesSubTitleHeader').innerText = t.servicesSubTitleHeader;
+            document.getElementById('badge1').innerText = t.badge1;
+            document.getElementById('card1Title').innerText = t.card1Title;
+            document.getElementById('card1Desc').innerText = t.card1Desc;
+            document.getElementById('card1FeatTitle').innerText = t.card1FeatTitle;
+            document.getElementById('card1Feat').innerText = t.card1Feat;
+            document.getElementById('card1Status').innerText = t.card1Status;
+            document.getElementById('badge2').innerText = t.badge2;
+            document.getElementById('card2Title').innerText = t.card2Title;
+            document.getElementById('card2Desc').innerText = t.card2Desc;
+            document.getElementById('card2FeatTitle').innerText = t.card2FeatTitle;
+            document.getElementById('card2Feat').innerText = t.card2Feat;
+            document.getElementById('card2Status').innerText = t.card2Status;
+            document.getElementById('badge3').innerText = t.badge3;
+            document.getElementById('card3Title').innerText = t.card3Title;
+            document.getElementById('card3Desc').innerText = t.card3Desc;
+            document.getElementById('card3FeatTitle').innerText = t.card3FeatTitle;
+            document.getElementById('card3Feat').innerText = t.card3Feat;
+            document.getElementById('card3Status').innerText = t.card3Status;
+            document.getElementById('badge4').innerText = t.badge4;
+            document.getElementById('card4Title').innerText = t.card4Title;
+            document.getElementById('card4Desc').innerText = t.card4Desc;
+            document.getElementById('card4FeatTitle').innerText = t.card4FeatTitle;
+            document.getElementById('card4Feat').innerText = t.card4Feat;
+            document.getElementById('card4Status').innerText = t.card4Status;
+            document.getElementById('badge5').innerText = t.badge5;
+            document.getElementById('card5Title').innerText = t.card5Title;
+            document.getElementById('card5Desc').innerText = t.card5Desc;
+            document.getElementById('card5FeatTitle').innerText = t.card5FeatTitle;
+            document.getElementById('card5Feat').innerText = t.card5Feat;
+            document.getElementById('card5Status').innerText = t.card5Status;
+            document.getElementById('badge6').innerText = t.badge6;
+            document.getElementById('card6Title').innerText = t.card6Title;
+            document.getElementById('card6Desc').innerText = t.card6Desc;
+            document.getElementById('card6FeatTitle').innerText = t.card6FeatTitle;
+            document.getElementById('card6Feat').innerText = t.card6Feat;
+            document.getElementById('card6Status').innerText = t.card6Status;
+            document.getElementById('trackerSub').innerText = t.trackerSub;
+            document.getElementById('trackerTitle').innerText = t.trackerTitle;
+            document.getElementById('trackerDesc').innerText = t.trackerDesc;
+            document.getElementById('inputReceiptNo').placeholder = t.inputReceiptNo;
+            document.getElementById('inputControlNo').placeholder = t.inputControlNo;
+            document.getElementById('btnTrackNow').innerText = t.btnTrackNow;
+            document.getElementById('faqHeader').innerText = t.faqHeader;
+            document.getElementById('faqSubHeader').innerText = t.faqSubHeader;
+            document.getElementById('faqq1').innerText = t.faqq1;
+            document.getElementById('faqa1').innerText = t.faqa1;
+            document.getElementById('faqq2').innerText = t.faqq2;
+            document.getElementById('faqa2').innerText = t.faqa2;
+            document.getElementById('faqq3').innerText = t.faqq3;
+            document.getElementById('faqa3').innerText = t.faqa3;
+            document.getElementById('footerDesc').innerText = t.footerDesc;
+            document.getElementById('footerQuickTitle').innerText = t.footerQuickTitle;
+            document.getElementById('footerContactTitle').innerText = t.footerContactTitle;
+            document.getElementById('footerPayTitle').innerText = t.footerPayTitle;
+            document.getElementById('footerPayDesc').innerText = t.footerPayDesc;
+        }
+
+        // On Page Load Check Saved Language
+        document.addEventListener("DOMContentLoaded", function() {
+            const savedLang = localStorage.getItem('mkolani_portal_lang') || 'sw';
+            setLanguage(savedLang);
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
