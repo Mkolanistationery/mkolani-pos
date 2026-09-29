@@ -1,9 +1,42 @@
-{% extends "base.html" %}{% block title %}Login | Mkolani POS{% endblock %}{% block content %}
-<div class="auth-wrap"><div class="auth-card">
-<div class="brand-circle"><i class="bi bi-shop"></i></div><h2>Mkolani POS</h2><p class="text-muted">Business Management System</p>
-{% if error %}<div class="alert alert-danger">{{error}}</div>{% endif %}{% if success %}<div class="alert alert-success">{{success}}</div>{% endif %}
-<form method="post"><label>Email</label><input class="form-control mb-3" type="email" name="email" required>
-<label>Password</label><input class="form-control mb-3" type="password" name="password" required>
-<button class="btn btn-primary w-100 py-2">Ingia</button></form>
-<div class="d-flex justify-content-between mt-3 small"><a href="{{url_for('forgot_password')}}">Umesahau password?</a><a href="{{url_for('register')}}">Fungua account</a></div>
-</div></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Ingia Kwenye Mfumo | Mkolani POS{% endblock %}
+
+{% block public_content %}
+<section class="py-5 bg-light min-vh-100 d-flex align-items-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card border-0 shadow-lg p-4 rounded-4">
+                    <div class="text-center mb-4">
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-2">Karibu Tena</span>
+                        <h3 class="fw-bold text-dark">Ingia Kwenye Mfumo</h3>
+                        <p class="text-muted small">Ingiza taarifa zako ili kuendelea na dashboard</p>
+                    </div>
+
+                    <form action="{{ url_for('login') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Barua Pepe (Email)</label>
+                            <input type="email" name="email" class="form-control" placeholder="jina@biashara.com" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-semibold mb-0">Neno la Siri (Password)</label>
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none small">Umesahau Password?</a>
+                            </div>
+                            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-3">INGIA KWENYE MFUMO</button>
+
+                        <div class="text-center">
+                            <small class="text-muted">Huna akaunti bado? <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none">Sajili Biashara Hapa</a></small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
