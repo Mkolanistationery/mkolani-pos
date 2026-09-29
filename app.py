@@ -153,10 +153,17 @@ def forgot_password():
         return redirect(url_for('index'))
     return redirect(url_for('index'))
 
-@app.route('/sales')
+# ROUTE YA MAUZO & RISITI (POS)
+@app.route('/sales', methods=['GET', 'POST'])
 @login_required
 def sales():
-    return render_template('sales.html')
+    if request.method == 'POST':
+        # Logic ya kuhifadhi mauzo itakuja hapa stoko ikikamilika
+        flash('Mauzo yamekamilika na risiti imetolewa!', 'success')
+        return redirect(url_for('sales'))
+
+    customers_list = Customer.query.filter_by(user_id=current_user.id).all()
+    return render_template('sales.html', customers_list=customers_list)
 
 @app.route('/sms-center')
 @login_required
