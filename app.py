@@ -6,7 +6,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'mkolani-secret-key-2026')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///mkolani_pos.db')
+
+# DATABASE CONFIGURATION FOR RENDER & LOCAL
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///mkolani_pos.db')
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -28,6 +34,10 @@ class User(UserMixin, db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# CREATE TABLES AUTOMATICALLY BEFORE FIRST REQUEST
+with app.app_context():
+    db.create_all()
 
 # HAKIKISHA UTAMBULISHO WA ENDPOINTS UPO KWENYE BASE TEMPLATE
 @app.context_processor
@@ -169,6 +179,4 @@ def admin_dashboard():
     return render_template('admin.html')
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
