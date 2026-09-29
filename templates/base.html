@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}e-RITA Portal | Registration, Insolvency & Trusteeship Agency{% endblock %}</title>
+    <title>{% block title %}Mkolani Business Portal | Comprehensive Management System{% endblock %}</title>
 
     <!-- Google Fonts & Bootstrap 5 -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -39,7 +39,7 @@
 
     {% if current_user.is_authenticated %}
     <!-- ========================================================= -->
-    <!-- A. DASHBOARD YA NDANI                                      -->
+    <!-- A. DASHBOARD YA NDANI (UKISHAINGIA KWENYE MFUMO)          -->
     <!-- ========================================================= -->
 
     <!-- SIDEBAR LEFT -->
@@ -54,10 +54,10 @@
                 <i class="bi bi-grid-1x2"></i> <span>Dashboard</span>
             </a>
             <a href="{{ url_for('sales') }}" class="sidebar-link">
-                <i class="bi bi-cart3"></i> <span>Mauzo (POS)</span>
+                <i class="bi bi-cart3"></i> <span>Mauzo & Risiti</span>
             </a>
 
-            <div class="menu-header">CAMPAIGNS & CRM</div>
+            <div class="menu-header">HUDUMA NA MIKOPO</div>
             <a href="{{ url_for('sms_center') }}" class="sidebar-link">
                 <i class="bi bi-chat-left-text"></i> <span>SMS Center</span>
             </a>
@@ -65,10 +65,10 @@
                 <i class="bi bi-people"></i> <span>Wateja (CRM)</span>
             </a>
             <a href="{{ url_for('debts') }}" class="sidebar-link">
-                <i class="bi bi-wallet2"></i> <span>Madeni</span>
+                <i class="bi bi-wallet2"></i> <span>Mikopo & Madeni</span>
             </a>
 
-            <div class="menu-header">INVENTORY & EXPENSES</div>
+            <div class="menu-header">STOKO & MIKATABA</div>
             <a href="{{ url_for('products') }}" class="sidebar-link">
                 <i class="bi bi-boxes"></i> <span>Stoko & Bidhaa</span>
             </a>
@@ -76,7 +76,7 @@
                 <i class="bi bi-receipt-cutoff"></i> <span>Matumizi</span>
             </a>
             <a href="{{ url_for('reports') }}" class="sidebar-link">
-                <i class="bi bi-graph-up-arrow"></i> <span>Ripoti</span>
+                <i class="bi bi-graph-up-arrow"></i> <span>Ripoti Zote</span>
             </a>
 
             {% if current_user.role == 'master' %}
@@ -138,14 +138,14 @@
 
     {% else %}
     <!-- ========================================================= -->
-    <!-- B. PUBLIC e-RITA STYLE PORTAL (KABLA YA LOG IN)            -->
+    <!-- B. PUBLIC PORTAL (e-RITA STYLE FORMAT - KABLA YA LOG IN)   -->
     <!-- ========================================================= -->
 
     <!-- TOP HEADER -->
     <div class="bg-dark text-white py-1 px-3 fs-7">
         <div class="container d-flex justify-content-between align-items-center">
             <small>
-                <strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Wizara ya Katiba na Sheria | Hotline: +255 (22) 2924180 / 181
+                <strong>JAMHURI YA MUUNGANO WA TANZANIA</strong> | Usimamizi wa Biashara, Shule na Mikopo | Hotline: +255 625 567 603
             </small>
             <small>🇹🇿 Swahili | 🇬🇧 English</small>
         </div>
@@ -155,8 +155,8 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold text-primary fs-4" href="/">
-                e-RITA Portal
-                <span class="d-block text-muted fs-7 fw-normal">Registration, Insolvency & Trusteeship Agency</span>
+                Mkolani Business Portal
+                <span class="d-block text-muted fs-7 fw-normal">Sales, School Management, Loans & Receipting Agency</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav">
                 <span class="navbar-toggler-icon"></span>
@@ -164,13 +164,14 @@
             <div class="collapse navbar-collapse" id="publicNav">
                 <ul class="navbar-nav me-auto ms-lg-4 mb-2 mb-lg-0 fw-semibold">
                     <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#services">Birth Certificate Services</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#services">Death Certificate Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services">Huduma za Risiti & Mauzo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services">Usimamizi wa Shule & Mikopo</a></li>
                     <li class="nav-item"><a class="nav-link" href="#tracker">Track Status</a></li>
                     <li class="nav-item"><a class="nav-link" href="#faq">FAQ & Support</a></li>
                 </ul>
                 <div class="d-flex gap-2">
                     <a href="{{ url_for('login') }}" class="btn btn-outline-primary rounded-pill px-4">Sign in</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary rounded-pill px-4">Register Account</a>
                 </div>
             </div>
         </div>
@@ -195,22 +196,22 @@
             <div class="container">
                 <div class="row align-items-center g-4">
                     <div class="col-lg-7">
-                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Official Tanzania Government Portal</span>
-                        <h1 class="display-5 fw-bold text-dark mb-3">RITA Services with Speed, Security and Ease</h1>
-                        <p class="lead text-muted mb-4">Register and apply for Birth and Death Certificates online. Sign in to your account or create a new account to get started.</p>
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill fw-bold mb-3">Official Business & Enterprise Portal</span>
+                        <h1 class="display-5 fw-bold text-dark mb-3">Mkolani Services with Speed, Security and Ease</h1>
+                        <p class="lead text-muted mb-4">Kutoa risiti za mfumo, kusimamia maduka, ada na rekodi za shule, na mikopo ya biashara zote Tanzania. Sign in to your account or create a new account to get started.</p>
                         
                         <div class="row text-center g-3 pt-3 border-top">
                             <div class="col-4">
                                 <h4 class="fw-bold text-primary mb-0">1.2M+</h4>
-                                <small class="text-muted">Online Applications Processed</small>
+                                <small class="text-muted">Online Receipts Issued</small>
                             </div>
                             <div class="col-4">
-                                <h4 class="fw-bold text-primary mb-0">&lt; 48 HRS</h4>
-                                <small class="text-muted">Average Processing Time</small>
+                                <h4 class="fw-bold text-primary mb-0">&lt; 1 SEC</h4>
+                                <small class="text-muted">Receipt Generation Time</small>
                             </div>
                             <div class="col-4">
                                 <h4 class="fw-bold text-primary mb-0">24/7</h4>
-                                <small class="text-muted">Customer and GePG Support</small>
+                                <small class="text-muted">Customer & Payment Support</small>
                             </div>
                         </div>
                     </div>
@@ -248,81 +249,81 @@
         <section id="services" class="py-5">
             <div class="container">
                 <div class="text-center mb-5">
-                    <h6 class="text-primary text-uppercase fw-bold">SERVICES & OFFICIAL FEES</h6>
-                    <h2 class="fw-bold text-dark">Available Services & Applicable Fees</h2>
-                    <p class="text-muted">Select a service below to view instructions, required documents, and start your online application.</p>
+                    <h6 class="text-primary text-uppercase fw-bold">SERVICES & ENTERPRISE TOOLS</h6>
+                    <h2 class="fw-bold text-dark">Available Services & Applicable Features</h2>
+                    <p class="text-muted">Select a service category below to view features, management tools, and start your enterprise workflow.</p>
                 </div>
                 
                 <div class="row g-4">
-                    <!-- Birth Certificate -->
+                    <!-- Mauzo na Risiti -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Civil Registration</span>
-                            <h5 class="fw-bold text-dark">Birth Certificate</h5>
-                            <p class="text-muted small">Apply for new birth registration, certificate verification, duplicates, or correction of details on existing birth certificates.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Business Operations</span>
+                            <h5 class="fw-bold text-dark">Utoaji wa Risiti & POS</h5>
+                            <p class="text-muted small">Kutoa risiti za mauzo ya papo kwa papo, kurekodi bidhaa za duka, na kuunganisha na printer za risiti.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Required Documents:</strong> Clinic Card / Notification, Parents' IDs, Proof of Birth.</p>
-                            <p class="fw-bold text-primary mb-0">Fee: TZS 7,000 - 20,000</p>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Risiti za Digitali, Ripoti za Kila Siku, Duka la Rejareja & Jumla.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Inafanya Kazi 100%</p>
                         </div>
                     </div>
 
-                    <!-- Death Certificate -->
+                    <!-- Usimamizi wa Shule -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Civil Registration</span>
-                            <h5 class="fw-bold text-dark">Death Certificate</h5>
-                            <p class="text-muted small">Register a death, request certified copies, or complete verification of death records issued by RITA.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Education System</span>
+                            <h5 class="fw-bold text-dark">Usimamizi wa Shule</h5>
+                            <p class="text-muted small">Kutengeneza risiti za Ada, kusimamia taarifa za wanafunzi, matokeo, na utumaji wa SMS za shule kwa wazazi.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Required Documents:</strong> Burial Permit / Hospital Notification, Deceased & Applicant IDs.</p>
-                            <p class="fw-bold text-primary mb-0">Fee: TZS 7,000 - 20,000</p>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Risiti za Ada, Matokeo, Mfumo wa SMS kwa Wazazi.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
                         </div>
                     </div>
 
-                    <!-- Track Application Status -->
+                    <!-- Usimamizi wa Mikopo -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Public Online Tool</span>
-                            <h5 class="fw-bold text-dark">Track Application Status</h5>
-                            <p class="text-muted small">Check real-time progress of your submitted application or verify payment status using your application code or GePG Control Number.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Financial Services</span>
+                            <h5 class="fw-bold text-dark">Usimamizi wa Mikopo & Madeni</h5>
+                            <p class="text-muted small">Kuhifadhi mikopo ya wateja, kuhesabu marejesho, riba, na kuwakumbusha wateja kwa SMS kiotomatiki.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Required Numbers:</strong> Application Reference Number or GePG Control Number.</p>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Vikundi vya Mikopo, Riba, Risiti za Marejesho.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
+                        </div>
+                    </div>
+
+                    <!-- Verification Tool -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Public Verification</span>
+                            <h5 class="fw-bold text-dark">Uhakiki wa Risiti za Biashara</h5>
+                            <p class="text-muted small">Mteja anaweza kuhakiki usahihi wa risiti aliyopewa kutoka kwenye duka au shule yako mtandaoni.</p>
+                            <hr>
+                            <p class="small text-muted mb-1"><strong>Taarifa Zinazohitajika:</strong> Namba ya Risiti au Application Reference Number.</p>
                             <p class="fw-bold text-success mb-0">Fee: Free</p>
                         </div>
                     </div>
 
-                    <!-- Certificate Verification -->
+                    <!-- SMS Center & CRM -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Government Use</span>
-                            <h5 class="fw-bold text-dark">Certificate Verification</h5>
-                            <p class="text-muted small">Verify authenticity of RITA certificates for use in other government services, employment, education, and legal procedures.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Communication</span>
+                            <h5 class="fw-bold text-dark">SMS Center & CRM</h5>
+                            <p class="text-muted small">Kutuma matangazo kwa wateja wote, kumbukumbu za malipo, na SMS za shukrani baada ya ununuzi.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Required Information:</strong><br>• Certificate Number or Application Code<br>• Applicant Name and Event Year</p>
-                            <p class="fw-bold text-primary mb-0">Fee: 6,000 TZS for Birth and Death Certificates</p>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Bulk SMS Gateway, Wateja CRM, Sender ID.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Inafanya Kazi</p>
                         </div>
                     </div>
 
-                    <!-- Duplicate Certificate -->
+                    <!-- Stoko na Matumizi -->
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Re-Issuance</span>
-                            <h5 class="fw-bold text-dark">Duplicate Certificate</h5>
-                            <p class="text-muted small">Apply for a replacement certificate if the original is lost, damaged, or needs re-issuance for official use.</p>
+                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Inventory Control</span>
+                            <h5 class="fw-bold text-dark">Stoko & Taarifa za Matumizi</h5>
+                            <p class="text-muted small">Kudhibiti wizi dukani, kufuatilia bidhaa zinazoisha, na kurekodi matumizi ya kila siku ya biashara.</p>
                             <hr>
-                            <p class="small text-muted mb-1"><strong>Required Documents:</strong><br>• Original Certificate Number or Application Record<br>• Applicant NIDA ID</p>
-                            <p class="fw-bold text-primary mb-0">Fee: 7,000 TZS for Birth and Death Certificates</p>
-                        </div>
-                    </div>
-
-                    <!-- Certificate Correction -->
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 border-0 shadow-sm p-4 rounded-3">
-                            <span class="badge bg-secondary-subtle text-secondary w-auto mb-2 align-self-start">Record Update</span>
-                            <h5 class="fw-bold text-dark">Certificate Correction</h5>
-                            <p class="text-muted small">Apply for correction of details on a certificate such as names, dates, or other records after submitting legal evidence.</p>
-                            <hr>
-                            <p class="small text-muted mb-1"><strong>Required Documents:</strong><br>• Copy of certificate with error<br>• Proof documents for correct details (e.g: affidavit / hospital letter)</p>
-                            <p class="fw-bold text-primary mb-0">Fee: 13,000 TZS for Birth and Death Certificates</p>
+                            <p class="small text-muted mb-1"><strong>Vipengele:</strong> Alerts za Stoko, Kurekodi Matumizi, Faida & Hasara.</p>
+                            <p class="fw-bold text-primary mb-0">Status: Tayari Kutumika</p>
                         </div>
                     </div>
                 </div>
@@ -334,16 +335,16 @@
             <div class="container">
                 <div class="row justify-content-center">
                     <div class="col-md-8 text-center">
-                        <h6 class="text-primary text-uppercase fw-bold">APPLICATION TRACKER</h6>
-                        <h3 class="fw-bold text-dark mb-2">Track Your Application Status</h3>
-                        <p class="text-muted small mb-4">Enter both Application Code and GePG Control Number to check status.</p>
+                        <h6 class="text-primary text-uppercase fw-bold">RECEIPT & TRANSACTION TRACKER</h6>
+                        <h3 class="fw-bold text-dark mb-2">Track Your Receipt or Loan Status</h3>
+                        <p class="text-muted small mb-4">Enter both Receipt Reference Code and Payment Control Number to check status.</p>
                         
-                        <form class="row g-3 justify-content-center" onsubmit="event.preventDefault(); alert('Checking application status...');">
+                        <form class="row g-3 justify-content-center" onsubmit="event.preventDefault(); alert('Inahakiki risiti/ombilako...');">
                             <div class="col-md-5">
-                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Application Reference / Code" required>
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Receipt / Reference Code" required>
                             </div>
                             <div class="col-md-5">
-                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="GePG Control Number" required>
+                                <input type="text" class="form-control form-control-lg rounded-pill" placeholder="Control Number / NIDA ID" required>
                             </div>
                             <div class="col-md-10">
                                 <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">Track Status</button>
@@ -359,7 +360,7 @@
             <div class="container">
                 <div class="text-center mb-5">
                     <h2 class="fw-bold text-dark">Frequently Asked Questions (FAQ)</h2>
-                    <p class="text-muted">Get quick answers about using the e-RITA Portal and GePG payments.</p>
+                    <p class="text-muted">Get quick answers about using Mkolani Portal and payment processing.</p>
                 </div>
                 
                 <div class="row justify-content-center">
@@ -368,12 +369,12 @@
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                        1. How do I apply for a Birth Certificate online?
+                                        1. Nawezaje kutoa risiti za biashara au ada ya shule mtandaoni?
                                     </button>
                                 </h2>
                                 <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
                                     <div class="accordion-body text-muted small">
-                                        Click on the 'Sign In' or 'Register Account' button to log in. Navigate to Birth Certificate Services, select your application type (New, Old to New), upload required documents, and submit.
+                                        Bonyeza kitufe cha 'Sign In' au 'Register Account' ili kuingia. Nenda kwenye sehemu ya Mauzo au Ada ya Shule, ingiza kiasi, kisha bonyeza 'Toa Risiti' ili kupata risiti ya digitali.
                                     </div>
                                 </div>
                             </div>
@@ -381,12 +382,12 @@
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                        2. How do I pay application fees using GePG?
+                                        2. Je, mfumo unasaidia kusimamia mikopo na marejesho?
                                     </button>
                                 </h2>
                                 <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                     <div class="accordion-body text-muted small">
-                                        After submitting your application, a GePG Control Number will be generated. You can pay via M-PESA, TIGO PESA, or NMB / CRDB banks using the provided Control Number.
+                                        Ndiyo, unaweza kusajili wakopaji, kuweka viwango vya riba, kurekodi marejesho ya kila siku/wiki/mwezi, na kutuma SMS za kumbukumbu.
                                     </div>
                                 </div>
                             </div>
@@ -394,12 +395,12 @@
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                        3. How long does it take to process a birth or death certificate?
+                                        3. Je, inachukua muda gani risiti kuanza kufanya kazi?
                                     </button>
                                 </h2>
                                 <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                     <div class="accordion-body text-muted small">
-                                        The average processing time is less than 48 hours once payment and all required documents are verified.
+                                        Risiti inatengenezwa papo hapo chini ya sekunde 1 na mteja anaweza kuipokea kwa SMS au kuipakua kama PDF.
                                     </div>
                                 </div>
                             </div>
@@ -439,9 +440,9 @@
             <div class="container">
                 <div class="row g-4 mb-4">
                     <div class="col-md-4">
-                        <h5 class="fw-bold text-primary mb-2">RITA Tanzania</h5>
-                        <h6 class="fw-bold mb-3">e-RITA Citizen Portal</h6>
-                        <p class="text-muted small">e-RITA Portal is the official digital portal of the Registration, Insolvency and Trusteeship Agency (RITA) for civil registration, trusteeship, and insolvency services in Tanzania.</p>
+                        <h5 class="fw-bold text-primary mb-2">Mkolani Management</h5>
+                        <h6 class="fw-bold mb-3">e-Mkolani Business Portal</h6>
+                        <p class="text-muted small">Mfumo rasmi wa utoaji risiti, usimamizi wa biashara, ada za shule, mikopo, na huduma za CRM nchini Tanzania.</p>
                     </div>
                     <div class="col-md-3">
                         <h6 class="fw-bold mb-3">Quick Links</h6>
@@ -454,13 +455,13 @@
                     </div>
                     <div class="col-md-3">
                         <h6 class="fw-bold mb-3">Head Office Contacts</h6>
-                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-2"></i>Mtaa wa Simu / Kambarage, Dodoma, Tanzania</p>
-                        <p class="text-muted small mb-1"><i class="bi bi-telephone me-2"></i>+255 26 232 4053 / 0800 110 055</p>
-                        <p class="text-muted small mb-1"><i class="bi bi-envelope me-2"></i>info@rita.go.tz</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-2"></i>Mkolani, Mwanza, Tanzania</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-telephone me-2"></i>+255 625 567 603</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-envelope me-2"></i>info@mkolanipos.co.tz</p>
                     </div>
                     <div class="col-md-2">
-                        <h6 class="fw-bold mb-3">Secure GePG Payments</h6>
-                        <p class="text-muted small mb-2">This platform uses Tanzania Government GePG for fast and secure payments.</p>
+                        <h6 class="fw-bold mb-3">Payments Supported</h6>
+                        <p class="text-muted small mb-2">Mfumo unasaidia malipo yote ya simu na benki kwa haraka.</p>
                         <div class="d-flex gap-1 flex-wrap">
                             <span class="badge bg-secondary">M-PESA</span>
                             <span class="badge bg-secondary">TIGO PESA</span>
@@ -469,7 +470,7 @@
                     </div>
                 </div>
                 <hr class="border-secondary">
-                <p class="text-center text-muted small mb-0">&copy; 2026 Registration, Insolvency & Trusteeship Agency (RITA). All rights reserved.</p>
+                <p class="text-center text-muted small mb-0">&copy; 2026 Mkolani Management Agency. All rights reserved.</p>
             </div>
         </footer>
         {% endblock %}
