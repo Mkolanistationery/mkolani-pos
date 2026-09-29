@@ -48,7 +48,7 @@
                 </div>
                 <div>
                     <small class="text-muted d-block">Wateja Kwenye Mfumo</small>
-                    <h4 class="fw-bold text-dark mb-0">{% if customers_list %}{{ customers_list|length }}{% else %}0{% endif %}</h4>
+                    <h4 class="fw-bold text-dark mb-0">{{ customers_list|length if customers_list else 0 }}</h4>
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Tuma SMS Kwa:</label>
                         <select name="recipient_type" class="form-select" id="recipientType" onchange="toggleRecipientInput(this)">
-                            <option value="all">Wateja Wote Waliosajiliwa ({% if customers_list %}{{ customers_list|length }}{% else %}0{% endif %} Wateja)</option>
+                            <option value="all">Wateja Wote Waliosajiliwa ({{ customers_list|length if customers_list else 0 }} Wateja)</option>
                             <option value="single">Mteja Mmoja Maalum</option>
                             <option value="custom">Namba za Simu (Zitenganishe kwa koma)</option>
                         </select>
@@ -77,12 +77,12 @@
                     <div class="mb-3 d-none" id="singleCustomerDiv">
                         <label class="form-label small fw-semibold">Chagua Mteja:</label>
                         <select name="single_customer" class="form-select">
-                            {% if customers_list %}
+                            {% if customers_list and customers_list|length > 0 %}
                                 {% for c in customers_list %}
                                 <option value="{{ c.phone }}">{{ c.name }} ({{ c.phone }})</option>
                                 {% endfor %}
                             {% else %}
-                                <option value="">Hakuna mteja aliyesajiliwa</option>
+                                <option value="">Hakuna mteja aliyesajiliwa bado</option>
                             {% endif %}
                         </select>
                     </div>
@@ -110,7 +110,7 @@
             </div>
         </div>
 
-        <!-- KULIA: RECHARGE -->
+        <!-- KULIA: TOP UP -->
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
                 <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
@@ -152,7 +152,7 @@
         </div>
     </div>
 
-    <!-- KUMBUMBUKU ZA SMS ZILIZOTUMWA -->
+    <!-- LOGS TABLE -->
     <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mt-2">
         <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
             <i class="bi bi-clock-history text-secondary me-2"></i>Kumbukumbu za SMS Zilizotumwa Karibuni
