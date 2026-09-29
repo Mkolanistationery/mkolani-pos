@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'mkolani-secret-key-2026')
 
-# DATABASE CONFIGURATION (Inasaidia SQLite na PostgreSQL ya Render)
+# DATABASE CONFIGURATION
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///mkolani_pos.db')
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
@@ -27,7 +27,7 @@ class User(UserMixin, db.Model):
     owner_name = db.Column(db.String(150), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.Text, nullable=False)  # Imeweka Text ili kuzuia truncation ya password hash
+    password = db.Column(db.Text, nullable=False)  # Imerekebishwa kuwa Text ili kuzuia error ya urefu wa hash
     business_type = db.Column(db.String(50), default='retail')
     role = db.Column(db.String(20), default='user')  # 'user' au 'master'
 
@@ -82,8 +82,8 @@ def register():
                 flash('Barua pepe hii tayari imeshasajiliwa! Tafadhali ingia.', 'warning')
                 return redirect(url_for('login'))
 
-            # Hash Password kwa njia salama
-            hashed_password = generate_password_hash(password)
+            # Hash Password kwa njia salama (pbkdf2:sha256 kuzuia Server Error)
+            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
             new_user = User(
                 business_name=business_name,
@@ -137,7 +137,7 @@ def login():
 
     return render_template('login.html')
 
-# 4. ROUTE YA LOGOUT (TOKA KWENYE MFUMO)
+# 4. ROUTE YA LOGOUT
 @app.route('/logout')
 @login_required
 def logout():
