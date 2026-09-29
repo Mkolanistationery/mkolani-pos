@@ -27,9 +27,21 @@ class User(UserMixin, db.Model):
     owner_name = db.Column(db.String(150), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.Text, nullable=False)  # Imerekebishwa kuwa Text kuzuia truncation ya password hash
+    password = db.Column(db.Text, nullable=False)
     business_type = db.Column(db.String(50), default='retail')
-    role = db.Column(db.String(20), default='user')  # 'user' au 'master'
+    role = db.Column(db.String(20), default='user')
+
+# MODEL YA WATEJA (CRM)
+class Customer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(150), nullable=True)
+    address = db.Column(db.String(200), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    total_spent = db.Column(db.Float, default=0.0)
+    debt = db.Column(db.Float, default=0.0)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -38,26 +50,22 @@ def load_user(user_id):
     except Exception:
         return None
 
-# UTENGENEZAJI WA TABLES YA DATABASE KIOTOMATIKI
 with app.app_context():
     try:
         db.create_all()
     except Exception as e:
         print(f"Error creating database tables: {e}")
 
-# HAKIKISHA ENDPOINTS ZOTE ZINAPATIKANA KWENYE TEMPLATES
 @app.context_processor
 def inject_endpoints():
     return dict(endpoints=[rule.endpoint for rule in app.url_map.iter_rules()])
 
-# 1. HOME / INDEX ROUTE
 @app.route('/')
 def index():
     if current_user.is_authenticated:
         return render_template('dashboard.html')
     return render_template('base.html')
 
-# 2. ROUTE YA KUSAJILI BIASHARA MPYA (REGISTER - MOJA KWA MOJA DASHBOARD)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -76,13 +84,11 @@ def register():
                 flash('Tafadhali jaza taarifa zote zinazohitajika.', 'danger')
                 return redirect(url_for('register'))
 
-            # Angalia kama email ipo tayari
             existing_user = User.query.filter_by(email=email).first()
             if existing_user:
                 flash('Barua pepe hii tayari imeshasajiliwa! Tafadhali ingia.', 'warning')
                 return redirect(url_for('login'))
 
-            # Hash Password kwa njia salama (pbkdf2:sha256 kuzuia Server Error)
             hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
             new_user = User(
@@ -97,7 +103,6 @@ def register():
             db.session.add(new_user)
             db.session.commit()
 
-            # INGIZA MTUMIAJI MOJA KWA MOJA KWENYE MFUMO (AUTO LOGIN)
             login_user(new_user)
             flash(f'Hongera {business_name}! Usajili umekamilika. Karibu kwenye Mkolani POS!', 'success')
             return redirect(url_for('index'))
@@ -105,12 +110,10 @@ def register():
         except Exception as e:
             db.session.rollback()
             flash('Kuna tatizo limetokea wakati wa usajili. Tafadhali jaribu tena.', 'danger')
-            print(f"Registration Error: {e}")
             return redirect(url_for('register'))
 
     return render_template('register.html')
 
-# 3. ROUTE YA LOG IN (INGIA KWENYE MFUMO)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -131,13 +134,11 @@ def login():
                 flash('Barua pepe au Neno la Siri sio sahihi.', 'danger')
                 return redirect(url_for('login'))
         except Exception as e:
-            print(f"Login Error: {e}")
             flash('Kuna tatizo limetokea wakati wa kuingia. Jaribu tena.', 'danger')
             return redirect(url_for('login'))
 
     return render_template('login.html')
 
-# 4. ROUTE YA LOGOUT
 @app.route('/logout')
 @login_required
 def logout():
@@ -145,7 +146,6 @@ def logout():
     flash('Umetoka kwenye mfumo kikamilifu.', 'info')
     return redirect(url_for('index'))
 
-# 5. FORGOT PASSWORD ROUTE
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -153,7 +153,6 @@ def forgot_password():
         return redirect(url_for('index'))
     return redirect(url_for('index'))
 
-# 6. ROUTE ZINGINE ZA DASHBOARD
 @app.route('/sales')
 @login_required
 def sales():
@@ -164,10 +163,33 @@ def sales():
 def sms_center():
     return render_template('sms_center.html')
 
-@app.route('/customers')
+# IMEREKEBISHWA: IMEONGEZWA POST METHOD NA KUHIFADHI WATEJA
+@app.route('/customers', methods=['GET', 'POST'])
 @login_required
 def customers():
-    return render_template('customers.html')
+    if request.method == 'POST':
+        name = request.form.get('name')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        address = request.form.get('address')
+        notes = request.form.get('notes')
+
+        if name and phone:
+            new_cust = Customer(
+                user_id=current_user.id,
+                name=name,
+                phone=phone,
+                email=email,
+                address=address,
+                notes=notes
+            )
+            db.session.add(new_cust)
+            db.session.commit()
+            flash('Mteja amesajiliwa kikamilifu!', 'success')
+            return redirect(url_for('customers'))
+
+    customers_list = Customer.query.filter_by(user_id=current_user.id).all()
+    return render_template('customers.html', customers_list=customers_list)
 
 @app.route('/debts')
 @login_required
