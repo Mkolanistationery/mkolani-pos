@@ -1,1 +1,132 @@
-web: gunicorn app:app
+{% extends "base.html" %}
+
+{% block title %}Mipangilio | Mkolani POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <!-- TITLE BAR -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-gear-fill text-primary me-2"></i>Mipangilio ya Akaunti & Biashara</h4>
+            <p class="text-muted small mb-0">Ratibu taarifa za duka, nembo kwenye risiti, na usalama wa akaunti yako.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- SHOTO: TAARIFA ZA BIASHARA -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                    <i class="bi bi-shop text-primary me-2"></i>Taarifa za Biashara / Taasisi
+                </h6>
+
+                <form action="{{ url_for('profile') }}" method="POST">
+                    <input type="hidden" name="action" value="update_info">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Jina la Biashara / Shule / Duka</label>
+                            <input type="text" name="business_name" class="form-control" value="{{ current_user.business_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Jina la Mwenye Duka / Msimamizi</label>
+                            <input type="text" name="owner_name" class="form-control" value="{{ current_user.owner_name or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Namba ya Simu ya Biashara</label>
+                            <input type="text" name="phone" class="form-control" value="{{ current_user.phone or '' }}" placeholder="07XXXXXXXX">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Aina ya Biashara / Taasisi</label>
+                            <select name="business_type" class="form-select">
+                                <option value="retail" {% if current_user.business_type == 'retail' %}selected{% endif %}>Duka la Rejareja (Retail)</option>
+                                <option value="wholesale" {% if current_user.business_type == 'wholesale' %}selected{% endif %}>Jumla (Wholesale)</option>
+                                <option value="school" {% if current_user.business_type == 'school' %}selected{% endif %}>Shule / Chuo (School Fee)</option>
+                                <option value="hardware" {% if current_user.business_type == 'hardware' %}selected{% endif %}>Hardware & Ujenzi</option>
+                                <option value="microfinance" {% if current_user.business_type == 'microfinance' %}selected{% endif %}>Taasisi ya Mikopo</option>
+                                <option value="stationery" {% if current_user.business_type == 'stationery' %}selected{% endif %}>Stationery & Printing</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Barua Pepe (Email - Sio ya Kubadilisha)</label>
+                        <input type="email" class="form-control bg-light" value="{{ current_user.email }}" readonly>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                        <i class="bi bi-check-circle me-1"></i> Hifadhi Mabadiliko
+                    </button>
+                </form>
+            </div>
+
+            <!-- KUBADILISHA PASSWORD -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                    <i class="bi bi-shield-lock text-danger me-2"></i>Usalama & Neno la Siri
+                </h6>
+
+                <form action="{{ url_for('profile') }}" method="POST">
+                    <input type="hidden" name="action" value="change_password">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Password ya Sasa</label>
+                            <input type="password" name="old_password" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Password Mpya</label>
+                            <input type="password" name="new_password" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline-danger rounded-pill px-4 fw-bold">
+                        Badilisha Password
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- KULIA: LOGO YA RISITI -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2 text-start">
+                    <i class="bi bi-image text-success me-2"></i>Logo Kwenye Risiti
+                </h6>
+                <p class="text-muted small">Pakia picha/nembo ya biashara yako ili ionekane juu ya risiti za mashine (Thermal POS Receipts).</p>
+                
+                <div class="my-3">
+                    <img id="profileLogoPreview" src="https://via.placeholder.com/120?text=NO+LOGO" class="img-thumbnail rounded-circle mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+                </div>
+
+                <input type="file" id="profileLogoInput" class="form-control form-control-sm mb-3" accept="image/*" onchange="uploadLogo(event)">
+                <button type="button" onclick="alert('Logo imehifadhiwa kwenye mtandao wako!');" class="btn btn-success w-100 rounded-pill fw-bold">
+                    Hifadhi Logo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const savedLogo = localStorage.getItem('mkolani_business_logo');
+    if (savedLogo) {
+        document.getElementById('profileLogoPreview').src = savedLogo;
+    }
+});
+
+function uploadLogo(event) {
+    const reader = new FileReader();
+    reader.onload = function(){
+        const output = document.getElementById('profileLogoPreview');
+        output.src = reader.result;
+        localStorage.setItem('mkolani_business_logo', reader.result);
+    };
+    reader.readAsDataURL(event.target.files[0]);
+}
+</script>
+{% endblock %}
