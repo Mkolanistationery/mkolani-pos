@@ -27,7 +27,7 @@ class User(UserMixin, db.Model):
     owner_name = db.Column(db.String(150), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.Text, nullable=False)  # Imerekebishwa kuwa Text ili kuzuia error ya urefu wa hash
+    password = db.Column(db.Text, nullable=False)  # Imerekebishwa kuwa Text kuzuia truncation ya password hash
     business_type = db.Column(db.String(50), default='retail')
     role = db.Column(db.String(20), default='user')  # 'user' au 'master'
 
