@@ -27,13 +27,13 @@ class User(UserMixin, db.Model):
     owner_name = db.Column(db.String(150), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(256), nullable=False)
+    password = db.Column(db.Text, nullable=False)  # Imerekebishwa kuwa Text ili isikwame kwa urefu wa hash
     business_type = db.Column(db.String(50), default='retail')
     role = db.Column(db.String(20), default='user')  # 'user' au 'master'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))  # Imerekebishwa kulingana na SQLAlchemy mpya
 
 # UTENGENEZAJI WA TABLES YA DATABASE KIOTOMATIKI
 with app.app_context():
@@ -54,7 +54,7 @@ def index():
         return render_template('dashboard.html')
     return render_template('base.html')
 
-# 2. ROUTE YA KUSAJILI BIASHARA MPYA (REGISTER - MOJA KWA MOJA DASHBOARD)
+# 2. ROUTE YA KUSAJILI BIASHARA MPYA
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -79,8 +79,8 @@ def register():
                 flash('Barua pepe hii tayari imeshasajiliwa! Tafadhali ingia.', 'warning')
                 return redirect(url_for('login'))
 
-            # Hash Password kwa njia salama na inayokubalika sehemu zote (pbkdf2:sha256)
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+            # Ku-hash password bila kuweka vikwazo vya aina ya hash
+            hashed_password = generate_password_hash(password)
 
             new_user = User(
                 business_name=business_name,
@@ -114,22 +114,27 @@ def login():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        email = request.form.get('email', '').lower().strip()
-        password = request.form.get('password')
+        try:
+            email = request.form.get('email', '').lower().strip()
+            password = request.form.get('password')
 
-        user = User.query.filter_by(email=email).first()
+            user = User.query.filter_by(email=email).first()
 
-        if user and check_password_hash(user.password, password):
-            login_user(user)
-            flash('Karibu tena kwenye Mkolani POS!', 'success')
-            return redirect(url_for('index'))
-        else:
-            flash('Barua pepe au Neno la Siri sio sahihi.', 'danger')
+            if user and check_password_hash(user.password, password):
+                login_user(user)
+                flash('Karibu tena kwenye Mkolani POS!', 'success')
+                return redirect(url_for('index'))
+            else:
+                flash('Barua pepe au Neno la Siri sio sahihi.', 'danger')
+                return redirect(url_for('login'))
+        except Exception as e:
+            print(f"Login Error: {e}")
+            flash('Kuna tatizo limetokea wakati wa kuingia. Jaribu tena.', 'danger')
             return redirect(url_for('login'))
 
     return render_template('login.html')
 
-# 4. ROUTE YA LOGOUT (TOKA KWENYE MFUMO)
+# 4. ROUTE YA LOGOUT
 @app.route('/logout')
 @login_required
 def logout():
