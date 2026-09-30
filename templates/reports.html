@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Ripoti Zote | Mkolani POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Ripoti za Biashara</h4>
+            <p class="text-muted small mb-0">Mauzo, faida, matumizi na madeni kwa muda uliochagua.</p>
+        </div>
+        <div class="btn-group">
+            {% for key, label in [('today','Leo'),('week','Siku 7'),('month','Mwezi Huu'),('all','Zote')] %}
+            <a href="{{ url_for('reports', period=key) }}"
+               class="btn btn-sm {{ 'btn-primary' if period == key else 'btn-outline-primary' }}">{{ label }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Mauzo ({{ sales_count }})</small>
+                <h5 class="fw-bold text-primary mb-0">TZS {{ total_sales|money }}</h5>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Faida ya Mauzo</small>
+                <h5 class="fw-bold text-success mb-0">TZS {{ gross_profit|money }}</h5>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Matumizi</small>
+                <h5 class="fw-bold text-danger mb-0">TZS {{ total_expenses|money }}</h5>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Faida Halisi</small>
+                <h5 class="fw-bold {{ 'text-success' if net_profit >= 0 else 'text-danger' }} mb-0">TZS {{ net_profit|money }}</h5>
+            </div>
+        </div>
+    </div>
+    <p class="text-muted small">Faida ya mauzo inahesabiwa kwa bidhaa zenye bei ya kununua. Bidhaa zilizoandikwa kwa mkono (zisizo kwenye stoko) huhesabiwa kama faida yote.</p>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h6 class="fw-bold border-bottom pb-2">Njia za Malipo</h6>
+                {% for method, amt in pay_breakdown.items() %}
+                <div class="d-flex justify-content-between small mb-1"><span>{{ method }}</span><strong>{{ amt|money }}</strong></div>
+                {% else %}<p class="text-muted small mb-0">Hakuna mauzo.</p>{% endfor %}
+                <hr>
+                <div class="d-flex justify-content-between small"><span>Madeni yaliyobaki</span>
+                    <strong class="text-danger">{{ total_debts|money }}</strong></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h6 class="fw-bold border-bottom pb-2">Bidhaa Zinazouzwa Zaidi</h6>
+                {% for name, row in top_products %}
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>{{ name }} <span class="text-muted">x{{ row.qty }}</span></span><strong>{{ row.total|money }}</strong></div>
+                {% else %}<p class="text-muted small mb-0">Hakuna data.</p>{% endfor %}
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                <h6 class="fw-bold border-bottom pb-2">Stoko Inayoisha</h6>
+                {% for p in low_stock %}
+                <div class="d-flex justify-content-between small mb-1"><span>{{ p.name }}</span>
+                    <span class="badge {{ 'bg-danger' if p.stock <= 0 else 'bg-warning text-dark' }}">{{ p.stock }}</span></div>
+                {% else %}<p class="text-muted small mb-0">Stoko yote iko sawa.</p>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <h6 class="fw-bold border-bottom pb-2">Mauzo ya Karibuni (50 ya mwisho)</h6>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light fs-7 text-uppercase text-secondary">
+                    <tr><th>Risiti</th><th>Tarehe</th><th>Mteja</th><th>Malipo</th><th class="text-end">Jumla</th><th class="text-end">Vitendo</th></tr>
+                </thead>
+                <tbody class="fs-7">
+                    {% for s in sales_list %}
+                    <tr>
+                        <td class="fw-bold">{{ s.receipt_no }}</td>
+                        <td>{{ s.created_at.strftime('%d/%m/%Y %H:%M') if s.created_at else '-' }}</td>
+                        <td>{{ s.customer_name }}</td>
+                        <td>{{ s.payment_method }}</td>
+                        <td class="text-end">{{ s.total|money }}</td>
+                        <td class="text-end text-nowrap">
+                            <a href="{{ url_for('receipt', sale_id=s.id) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" title="Print tena"><i class="bi bi-printer"></i></a>
+                            <form action="{{ url_for('sale_delete', sale_id=s.id) }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('Futa mauzo haya? Stoko itarudishwa.');">
+                                <button class="btn btn-sm btn-outline-danger rounded-pill py-0 px-2" title="Futa"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">Hakuna mauzo kwa kipindi hiki.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
