@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="sw">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Risiti {{ sale.receipt_no }}</title>
+    <style>
+        body { background: #f4f6f9; margin: 0; padding: 20px; font-family: 'Courier New', Courier, monospace; }
+        .thermal { width: 280px; margin: auto; padding: 10px; background: #fff; color: #000; font-size: 13px; }
+        .c { text-align: center; } .r { text-align: right; } .l { text-align: left; }
+        table { width: 100%; border-collapse: collapse; }
+        hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+        .actions { text-align: center; margin-top: 15px; }
+        .actions button { padding: 8px 18px; border: 0; border-radius: 20px; background: #0d6efd; color: #fff; cursor: pointer; }
+        img#logo { max-width: 75px; filter: grayscale(100%); display: none; margin: 0 auto 4px; }
+        @media print { body { background: #fff; padding: 0; } .actions { display: none; } .thermal { width: 80mm; } }
+    </style>
+</head>
+<body>
+    <div class="thermal">
+        <div class="c">
+            <img id="logo" alt="Logo">
+            <strong style="font-size:16px;text-transform:uppercase;">{{ current_user.business_name }}</strong><br>
+            <span style="text-transform:uppercase;">{{ current_user.business_type or 'RETAIL & SERVICES' }}</span><br>
+            Simu: {{ current_user.phone or '+255 625 567 603' }}<br>
+            <hr>
+            <strong>RISITI RASMI / OFFICIAL RECEIPT</strong>
+            <hr>
+        </div>
+        <div>
+            Na: {{ sale.receipt_no }}<br>
+            Tarehe: {{ sale.created_at.strftime('%d/%m/%Y %H:%M') if sale.created_at else '' }}<br>
+            Mteja: {{ sale.customer_name }}<br>
+            {% if sale.customer_phone %}Simu: {{ sale.customer_phone }}<br>{% endif %}
+            Malipo: {{ sale.payment_method }}
+        </div>
+        <hr>
+        <table>
+            <tr><th class="l">Item</th><th class="c">Qty</th><th class="r">Total</th></tr>
+            {% for i in sale.items %}
+            <tr><td class="l">{{ i.name }}</td><td class="c">{{ i.qty }}</td><td class="r">{{ i.total|money }}</td></tr>
+            {% endfor %}
+        </table>
+        <hr>
+        <table><tr><td><strong>JUMLA KUU:</strong></td><td class="r"><strong>TZS {{ sale.total|money }}</strong></td></tr></table>
+        <hr>
+        <div class="c">*** ASANTE NA KARIBU TENA ***<br><small>Powered by Mkolani POS System</small></div>
+    </div>
+    <div class="actions"><button onclick="window.print()">Print Risiti</button></div>
+    <script>
+        try {
+            const logo = localStorage.getItem('mkolani_business_logo');
+            if (logo) { const el = document.getElementById('logo'); el.src = logo; el.style.display = 'block'; }
+        } catch (e) {}
+    </script>
+</body>
+</html>
