@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Stoko & Bidhaa | Mkolani POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-boxes text-primary me-2"></i>Stoko & Bidhaa</h4>
+            <p class="text-muted small mb-0">Ongeza bidhaa, simamia bei na idadi ya stoko. Mauzo yanapunguza stoko kiotomatiki.</p>
+        </div>
+        <button class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg me-1"></i> Bidhaa Mpya
+        </button>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Aina za Bidhaa</small>
+                <h4 class="fw-bold mb-0">{{ products_list|length }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Thamani ya Stoko (bei ya kununua)</small>
+                <h4 class="fw-bold text-primary mb-0">TZS {{ stock_value|money }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Zinazoisha / Zimeisha</small>
+                <h4 class="fw-bold {{ 'text-danger' if low_count else 'text-success' }} mb-0">{{ low_count }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <input type="text" id="searchBox" class="form-control form-control-sm mb-3" placeholder="Tafuta bidhaa..." onkeyup="filterRows()">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light fs-7 text-uppercase text-secondary">
+                    <tr>
+                        <th>Bidhaa</th>
+                        <th>Aina</th>
+                        <th class="text-end">Bei ya Kununua</th>
+                        <th class="text-end">Bei ya Kuuza</th>
+                        <th class="text-center">Stoko</th>
+                        <th class="text-end">Vitendo</th>
+                    </tr>
+                </thead>
+                <tbody class="fs-7" id="rows">
+                    {% for p in products_list %}
+                    <tr>
+                        <td class="fw-bold">{{ p.name }}</td>
+                        <td>{{ p.category or '-' }}</td>
+                        <td class="text-end">{{ p.buy_price|money }}</td>
+                        <td class="text-end">{{ p.sell_price|money }}</td>
+                        <td class="text-center">
+                            {% if p.stock <= 0 %}
+                                <span class="badge bg-danger">Imeisha</span>
+                            {% elif p.stock <= p.min_stock %}
+                                <span class="badge bg-warning text-dark">{{ p.stock }} (inaisha)</span>
+                            {% else %}
+                                <span class="badge bg-success-subtle text-success border border-success">{{ p.stock }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-sm btn-outline-success rounded-pill py-0 px-2" title="Ongeza stoko"
+                                    data-id="{{ p.id }}" data-name="{{ p.name|e }}" onclick="openRestock(this)"><i class="bi bi-plus-circle"></i></button>
+                            <button class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" title="Hariri"
+                                    data-id="{{ p.id }}" data-name="{{ p.name|e }}" data-category="{{ (p.category or '')|e }}"
+                                    data-buy="{{ p.buy_price|int }}" data-sell="{{ p.sell_price|int }}"
+                                    data-stock="{{ p.stock }}" data-min="{{ p.min_stock }}"
+                                    onclick="openEdit(this)"><i class="bi bi-pencil"></i></button>
+                            <form action="{{ url_for('product_delete', pid=p.id) }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('Futa bidhaa hii?');">
+                                <button class="btn btn-sm btn-outline-danger rounded-pill py-0 px-2" title="Futa"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">Hakuna bidhaa bado. Bonyeza "Bidhaa Mpya" kuanza.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4 border-0">
+        <form action="{{ url_for('products') }}" method="POST">
+            <div class="modal-header border-0"><h5 class="modal-title fw-bold">Bidhaa Mpya</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label small fw-semibold">Jina la Bidhaa</label>
+                    <input name="name" class="form-control" required></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Aina / Kundi</label>
+                    <input name="category" class="form-control" placeholder="Mfano: Vinywaji"></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label small fw-semibold">Bei ya Kununua</label>
+                        <input name="buy_price" type="number" min="0" step="any" class="form-control" value="0"></div>
+                    <div class="col-6"><label class="form-label small fw-semibold">Bei ya Kuuza</label>
+                        <input name="sell_price" type="number" min="0" step="any" class="form-control" required></div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label small fw-semibold">Idadi ya Stoko</label>
+                        <input name="stock" type="number" min="0" class="form-control" value="0"></div>
+                    <div class="col-6"><label class="form-label small fw-semibold">Kiwango cha Tahadhari</label>
+                        <input name="min_stock" type="number" min="0" class="form-control" value="5"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0"><button class="btn btn-primary rounded-pill px-4 fw-bold">Hifadhi</button></div>
+        </form>
+    </div></div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4 border-0">
+        <form id="editForm" method="POST">
+            <div class="modal-header border-0"><h5 class="modal-title fw-bold">Hariri Bidhaa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label small fw-semibold">Jina la Bidhaa</label>
+                    <input name="name" id="eName" class="form-control" required></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Aina / Kundi</label>
+                    <input name="category" id="eCat" class="form-control"></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label small fw-semibold">Bei ya Kununua</label>
+                        <input name="buy_price" id="eBuy" type="number" min="0" step="any" class="form-control"></div>
+                    <div class="col-6"><label class="form-label small fw-semibold">Bei ya Kuuza</label>
+                        <input name="sell_price" id="eSell" type="number" min="0" step="any" class="form-control" required></div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label small fw-semibold">Idadi ya Stoko</label>
+                        <input name="stock" id="eStock" type="number" min="0" class="form-control"></div>
+                    <div class="col-6"><label class="form-label small fw-semibold">Kiwango cha Tahadhari</label>
+                        <input name="min_stock" id="eMin" type="number" min="0" class="form-control"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0"><button class="btn btn-primary rounded-pill px-4 fw-bold">Hifadhi Mabadiliko</button></div>
+        </form>
+    </div></div>
+</div>
+
+<!-- RESTOCK MODAL -->
+<div class="modal fade" id="restockModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-sm modal-dialog-centered"><div class="modal-content rounded-4 border-0">
+        <form id="restockForm" method="POST">
+            <div class="modal-header border-0"><h5 class="modal-title fw-bold" id="restockTitle">Ongeza Stoko</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <label class="form-label small fw-semibold">Idadi ya Kuongeza</label>
+                <input name="qty" type="number" min="1" class="form-control" required>
+            </div>
+            <div class="modal-footer border-0"><button class="btn btn-success rounded-pill px-4 fw-bold">Ongeza</button></div>
+        </form>
+    </div></div>
+</div>
+
+<script>
+function filterRows() {
+    const q = document.getElementById('searchBox').value.toLowerCase();
+    document.querySelectorAll('#rows tr').forEach(tr => {
+        tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+function openEdit(btn) {
+    const d = btn.dataset;
+    document.getElementById('editForm').action = '/products/' + d.id + '/edit';
+    document.getElementById('eName').value = d.name;
+    document.getElementById('eCat').value = d.category;
+    document.getElementById('eBuy').value = d.buy;
+    document.getElementById('eSell').value = d.sell;
+    document.getElementById('eStock').value = d.stock;
+    document.getElementById('eMin').value = d.min;
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+function openRestock(btn) {
+    document.getElementById('restockForm').action = '/products/' + btn.dataset.id + '/restock';
+    document.getElementById('restockTitle').innerText = 'Ongeza Stoko: ' + btn.dataset.name;
+    new bootstrap.Modal(document.getElementById('restockModal')).show();
+}
+</script>
+{% endblock %}
