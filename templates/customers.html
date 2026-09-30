@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Wateja (CRM) | Mkolani POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-people-fill text-primary me-2"></i>Wateja (CRM)</h4>
+            <p class="text-muted small mb-0">Sajili wateja wako, fuatilia manunuzi na madeni yao.</p>
+        </div>
+        <button class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-person-plus-fill me-1"></i> Mteja Mpya
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <input type="text" id="searchBox" class="form-control form-control-sm mb-3" placeholder="Tafuta kwa jina au simu..." onkeyup="filterRows()">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light fs-7 text-uppercase text-secondary">
+                    <tr>
+                        <th>Jina</th>
+                        <th>Simu</th>
+                        <th>Anwani</th>
+                        <th class="text-end">Amenunua (TZS)</th>
+                        <th class="text-end">Deni (TZS)</th>
+                        <th class="text-end">Vitendo</th>
+                    </tr>
+                </thead>
+                <tbody class="fs-7" id="rows">
+                    {% for c in customers_list %}
+                    <tr>
+                        <td class="fw-bold">{{ c.name }}</td>
+                        <td>{{ c.phone }}</td>
+                        <td>{{ c.address or '-' }}</td>
+                        <td class="text-end">{{ c.total_spent|money }}</td>
+                        <td class="text-end {{ 'text-danger fw-bold' if c.debt and c.debt > 0 else '' }}">{{ c.debt|money }}</td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" title="Hariri"
+                                    data-id="{{ c.id }}" data-name="{{ c.name|e }}" data-phone="{{ c.phone|e }}"
+                                    data-email="{{ (c.email or '')|e }}" data-address="{{ (c.address or '')|e }}"
+                                    data-notes="{{ (c.notes or '')|e }}"
+                                    onclick="openEdit(this)"><i class="bi bi-pencil"></i></button>
+                            <form action="{{ url_for('customer_delete', cid=c.id) }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('Futa mteja huyu?');">
+                                <button class="btn btn-sm btn-outline-danger rounded-pill py-0 px-2" title="Futa"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">Hakuna wateja bado. Bonyeza "Mteja Mpya" kuanza.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4 border-0">
+        <form action="{{ url_for('customers') }}" method="POST">
+            <div class="modal-header border-0"><h5 class="modal-title fw-bold">Mteja Mpya</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label small fw-semibold">Jina Kamili</label>
+                    <input name="name" class="form-control" required></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Namba ya Simu</label>
+                    <input name="phone" class="form-control" placeholder="07XXXXXXXX" required></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Barua Pepe (hiari)</label>
+                    <input name="email" type="email" class="form-control"></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Anwani (hiari)</label>
+                    <input name="address" class="form-control"></div>
+                <div><label class="form-label small fw-semibold">Maelezo (hiari)</label>
+                    <textarea name="notes" class="form-control" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer border-0"><button class="btn btn-primary rounded-pill px-4 fw-bold">Hifadhi Mteja</button></div>
+        </form>
+    </div></div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4 border-0">
+        <form id="editForm" method="POST">
+            <div class="modal-header border-0"><h5 class="modal-title fw-bold">Hariri Mteja</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label small fw-semibold">Jina Kamili</label>
+                    <input name="name" id="eName" class="form-control" required></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Namba ya Simu</label>
+                    <input name="phone" id="ePhone" class="form-control" required></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Barua Pepe</label>
+                    <input name="email" id="eEmail" type="email" class="form-control"></div>
+                <div class="mb-2"><label class="form-label small fw-semibold">Anwani</label>
+                    <input name="address" id="eAddress" class="form-control"></div>
+                <div><label class="form-label small fw-semibold">Maelezo</label>
+                    <textarea name="notes" id="eNotes" class="form-control" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer border-0"><button class="btn btn-primary rounded-pill px-4 fw-bold">Hifadhi Mabadiliko</button></div>
+        </form>
+    </div></div>
+</div>
+
+<script>
+function filterRows() {
+    const q = document.getElementById('searchBox').value.toLowerCase();
+    document.querySelectorAll('#rows tr').forEach(tr => {
+        tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+function openEdit(btn) {
+    const d = btn.dataset;
+    document.getElementById('editForm').action = '/customers/' + d.id + '/edit';
+    document.getElementById('eName').value = d.name;
+    document.getElementById('ePhone').value = d.phone;
+    document.getElementById('eEmail').value = d.email;
+    document.getElementById('eAddress').value = d.address;
+    document.getElementById('eNotes').value = d.notes;
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+</script>
+{% endblock %}
