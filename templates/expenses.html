@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Matumizi | Mkolani POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-receipt-cutoff text-primary me-2"></i>Matumizi</h4>
+            <p class="text-muted small mb-0">Rekodi gharama za biashara ili ripoti ya faida iwe sahihi.</p>
+        </div>
+        <button class="btn btn-primary rounded-pill px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="bi bi-plus-lg me-1"></i> Matumizi Mapya
+        </button>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Matumizi ya Mwezi Huu</small>
+                <h4 class="fw-bold text-danger mb-0">TZS {{ month_total|money }}</h4>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <small class="text-muted">Matumizi Yote</small>
+                <h4 class="fw-bold mb-0">TZS {{ all_total|money }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light fs-7 text-uppercase text-secondary">
+                    <tr>
+                        <th>Tarehe</th>
+                        <th>Maelezo</th>
+                        <th>Aina</th>
+                        <th class="text-end">Kiasi (TZS)</th>
+                        <th class="text-end">Futa</th>
+                    </tr>
+                </thead>
+                <tbody class="fs-7">
+                    {% for e in expenses_list %}
+                    <tr>
+                        <td>{{ e.created_at.strftime('%d/%m/%Y') if e.created_at else '-' }}</td>
+                        <td class="fw-bold">{{ e.title }}{% if e.note %}<div class="text-muted fw-normal">{{ e.note }}</div>{% endif %}</td>
+                        <td>{{ e.category or '-' }}</td>
+                        <td class="text-end">{{ e.amount|money }}</td>
+                        <td class="text-end">
+                            <form action="{{ url_for('expense_delete', eid=e.id) }}" method="POST" onsubmit="return confirm('Futa matumizi haya?');">
+                                <button class="btn btn-sm btn-outline-danger rounded-pill py-0 px-2"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center py-4 text-muted">Hakuna matumizi yaliyorekodiwa.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content rounded-4 border-0">
+        <form action="{{ url_for('expenses') }}" method="POST">
+            <div class="modal-header border-0"><h5 class="modal-title fw-bold">Matumizi Mapya</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label small fw-semibold">Maelezo</label>
+                    <input name="title" class="form-control" placeholder="Mfano: Kodi ya pango" required></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label small fw-semibold">Kiasi (TZS)</label>
+                        <input name="amount" type="number" min="1" step="any" class="form-control" required></div>
+                    <div class="col-6"><label class="form-label small fw-semibold">Aina</label>
+                        <select name="category" class="form-select">
+                            <option>Kodi / Pango</option><option>Umeme & Maji</option><option>Usafiri</option>
+                            <option>Mishahara</option><option>Manunuzi</option><option>Mengineyo</option>
+                        </select></div>
+                </div>
+                <div><label class="form-label small fw-semibold">Maelezo ya ziada (hiari)</label>
+                    <input name="note" class="form-control"></div>
+            </div>
+            <div class="modal-footer border-0"><button class="btn btn-primary rounded-pill px-4 fw-bold">Hifadhi</button></div>
+        </form>
+    </div></div>
+</div>
+{% endblock %}
