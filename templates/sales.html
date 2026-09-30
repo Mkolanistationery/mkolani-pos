@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}Mauzo & Risiti (POS) | Mkolani POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-1"><i class="bi bi-cart-check-fill text-primary me-2"></i>Mfumo wa Mauzo & Utoaji Risiti (POS)</h4>
+            <p class="text-muted small mb-0">Chagua bidhaa kutoka stoko au andika mwenyewe, kisha thibitisha na print risiti.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                    <i class="bi bi-plus-circle text-primary me-2"></i>Ongeza Bidhaa / Huduma
+                </h6>
+
+                <div class="row g-2 mb-1">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">Bidhaa / Huduma</label>
+                        <input type="text" id="itemName" list="productList" class="form-control form-control-sm"
+                               placeholder="Chagua kutoka stoko au andika" autocomplete="off" oninput="onNameInput()">
+                        <datalist id="productList">
+                            {% for p in products_list %}<option value="{{ p.name }}"></option>{% endfor %}
+                        </datalist>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Bei (TZS)</label>
+                        <input type="number" id="itemPrice" class="form-control form-control-sm" min="0" step="any">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Idadi</label>
+                        <input type="number" id="itemQty" class="form-control form-control-sm" value="1" min="1">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" onclick="addToCart()" class="btn btn-primary btn-sm w-100 rounded-pill fw-bold">
+                            <i class="bi bi-plus-lg"></i> Weka
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted d-block mb-3" id="stockHint"></small>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light fs-7 text-uppercase text-secondary">
+                            <tr>
+                                <th>Bidhaa / Huduma</th>
+                                <th class="text-center">Bei</th>
+                                <th class="text-center">Idadi</th>
+                                <th class="text-end">Jumla</th>
+                                <th class="text-end">Ondoa</th>
+                            </tr>
+                        </thead>
+                        <tbody class="fs-7" id="cartBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                    <i class="bi bi-clock-history text-secondary me-2"></i>Mauzo ya Karibuni
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <tbody class="fs-7">
+                            {% for s in recent_sales %}
+                            <tr>
+                                <td class="fw-bold">{{ s.receipt_no }}</td>
+                                <td>{{ s.created_at.strftime('%d/%m %H:%M') if s.created_at else '' }}</td>
+                                <td>{{ s.customer_name }}</td>
+                                <td class="text-end">{{ s.total|money }}</td>
+                                <td class="text-end"><a href="{{ url_for('receipt', sale_id=s.id) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2"><i class="bi bi-printer"></i></a></td>
+                            </tr>
+                            {% else %}
+                            <tr><td class="text-muted text-center py-3">Hakuna mauzo bado.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">
+                    <i class="bi bi-receipt text-success me-2"></i>Hitimisho la Malipo & Mteja
+                </h6>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Mteja</label>
+                    <select id="selectCustomer" class="form-select form-select-sm" onchange="onCustomerChange(this)">
+                        <option value="">Mteja wa Kawaida (Cash Customer)</option>
+                        {% for customer in customers_list %}
+                        <option value="{{ customer.id }}" data-name="{{ customer.name|e }}" data-phone="{{ customer.phone|e }}">{{ customer.name }} ({{ customer.phone }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Namba ya Simu ya Mteja (Hiari)</label>
+                    <input type="text" id="custPhone" class="form-control form-control-sm" placeholder="07XXXXXXXX">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Njia ya Malipo</label>
+                    <select id="paymentMethod" class="form-select form-select-sm">
+                        <option value="CASH">TASLIMU (CASH)</option>
+                        <option value="M-PESA / TIGO">M-PESA / TIGO PESA / AIRTEL</option>
+                        <option value="BANK / CRDB">BENKI / CRDB / NMB</option>
+                        <option value="DENI / CREDIT">DENI (CREDIT) - inarekodiwa kwenye Madeni</option>
+                    </select>
+                </div>
+
+                <hr class="my-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted fw-semibold">Jumla Kuu:</span>
+                    <h3 class="fw-bold text-primary mb-0" id="grandTotalDisplay">TZS 0</h3>
+                </div>
+
+                <button type="button" id="saveBtn" onclick="processSaleAndPrint()" class="btn btn-success w-100 rounded-pill py-2 fw-bold shadow-sm mt-3">
+                    <i class="bi bi-printer-fill me-1"></i> THIBITISHA & PRINT RISITI
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- THERMAL RECEIPT AREA -->
+<div id="receiptPrintArea" class="d-none">
+    <div class="thermal-receipt">
+        <div class="text-center mb-2">
+            <img id="receiptLogo" src="" alt="Logo" class="mb-1 d-none" style="max-width: 75px; filter: grayscale(100%);">
+            <h5 class="fw-bold mb-0 text-uppercase">{{ current_user.business_name }}</h5>
+            <small class="d-block text-uppercase">{{ current_user.business_type or 'RETAIL & SERVICES' }}</small>
+            <small class="d-block">Simu: {{ current_user.phone or '+255 625 567 603' }}</small>
+            <div class="border-top border-bottom border-dark my-2 py-1"><strong>RISITI RASMI / OFFICIAL RECEIPT</strong></div>
+        </div>
+        <div class="small mb-2">
+            <div><strong>Na:</strong> <span id="rcptNo"></span></div>
+            <div><strong>Tarehe:</strong> <span id="rcptDate"></span></div>
+            <div><strong>Mteja:</strong> <span id="rcptCustName"></span></div>
+            <div><strong>Simu:</strong> <span id="rcptCustPhone"></span></div>
+            <div><strong>Malipo:</strong> <span id="rcptPayMethod"></span></div>
+        </div>
+        <table class="w-100 small mb-2">
+            <thead><tr class="border-bottom border-dark">
+                <th class="text-start">Item</th><th class="text-center">Qty</th><th class="text-end">Total</th>
+            </tr></thead>
+            <tbody id="rcptTableItems"></tbody>
+        </table>
+        <div class="border-top border-dark pt-1 small">
+            <div class="d-flex justify-content-between fw-bold"><span>JUMLA KUU:</span><span id="rcptGrandTotal"></span></div>
+        </div>
+        <div class="text-center mt-3 pt-2 border-dashed small">
+            <p class="mb-1 fw-semibold">*** ASANTE NA KARIBU TENA ***</p>
+            <small class="d-block">Powered by Mkolani POS System</small>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    body * { visibility: hidden; }
+    #receiptPrintArea, #receiptPrintArea * { visibility: visible; }
+    #receiptPrintArea { display: block !important; position: absolute; left: 0; top: 0; width: 80mm; padding: 5px;
+        font-family: 'Courier New', Courier, monospace; }
+}
+.thermal-receipt { width: 280px; margin: auto; padding: 10px; background: #fff; font-family: 'Courier New', Courier, monospace; color: #000; }
+.border-dashed { border-top: 1px dashed #000; }
+</style>
+
+<script>
+// Bidhaa za stoko (data zinatoka kwenye database)
+const PRODUCTS = {{ products_list|map(attribute='name')|list|tojson }};
+const PRODUCT_DATA = {
+    {% for p in products_list %}
+    {{ p.name|tojson }}: { id: {{ p.id }}, price: {{ p.sell_price or 0 }}, stock: {{ p.stock or 0 }} },
+    {% endfor %}
+};
+
+let cart = [];
+let currentProduct = null;
+
+function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function onNameInput() {
+    const name = document.getElementById('itemName').value.trim();
+    const p = PRODUCT_DATA[name];
+    const hint = document.getElementById('stockHint');
+    if (p) {
+        currentProduct = { id: p.id, stock: p.stock };
+        document.getElementById('itemPrice').value = p.price;
+        hint.innerText = 'Stoko iliyopo: ' + p.stock;
+    } else {
+        currentProduct = null;
+        hint.innerText = '';
+    }
+}
+
+function qtyInCart(productId) {
+    return cart.filter(i => i.product_id === productId).reduce((s, i) => s + i.qty, 0);
+}
+
+function addToCart() {
+    const name = document.getElementById('itemName').value.trim();
+    const price = parseFloat(document.getElementById('itemPrice').value);
+    const qty = parseInt(document.getElementById('itemQty').value);
+
+    if (!name || isNaN(price) || isNaN(qty) || price <= 0 || qty <= 0) {
+        alert("Tafadhali ingiza jina, bei na idadi sahihi.");
+        return;
+    }
+    if (currentProduct && qtyInCart(currentProduct.id) + qty > currentProduct.stock) {
+        alert("Stoko haitoshi. Iliyobaki: " + currentProduct.stock);
+        return;
+    }
+
+    cart.push({ name, price, qty, product_id: currentProduct ? currentProduct.id : null });
+    updateCartUI();
+
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemPrice').value = '';
+    document.getElementById('itemQty').value = '1';
+    document.getElementById('stockHint').innerText = '';
+    currentProduct = null;
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    updateCartUI();
+}
+
+function cartTotal() {
+    return cart.reduce((s, i) => s + i.price * i.qty, 0);
+}
+
+function updateCartUI() {
+    const tbody = document.getElementById('cartBody');
+    if (cart.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">
+            <i class="bi bi-cart-x fs-3 d-block mb-1 text-secondary"></i>
+            Kikapu kiko wazi. Ongeza bidhaa hapo juu kuanza mauzo.</td></tr>`;
+    } else {
+        tbody.innerHTML = cart.map((item, index) => `
+            <tr>
+                <td class="fw-bold">${esc(item.name)}</td>
+                <td class="text-center">${item.price.toLocaleString()}</td>
+                <td class="text-center">${item.qty}</td>
+                <td class="text-end fw-bold">${(item.price * item.qty).toLocaleString()}</td>
+                <td class="text-end"><button onclick="removeFromCart(${index})" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-circle">&times;</button></td>
+            </tr>`).join('');
+    }
+    document.getElementById('grandTotalDisplay').innerText = 'TZS ' + cartTotal().toLocaleString();
+}
+
+function onCustomerChange(select) {
+    const opt = select.options[select.selectedIndex];
+    document.getElementById('custPhone').value = opt.getAttribute('data-phone') || '';
+}
+
+async function processSaleAndPrint() {
+    if (cart.length === 0) {
+        alert("Kikapu kiko wazi! Ongeza angalau bidhaa moja kutoa risiti.");
+        return;
+    }
+
+    const select = document.getElementById('selectCustomer');
+    const opt = select.options[select.selectedIndex];
+    const custId = select.value;
+    const custName = custId ? opt.getAttribute('data-name') : 'Cash Customer';
+    const custPhone = document.getElementById('custPhone').value.trim();
+    const payMethod = document.getElementById('paymentMethod').value;
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+
+    try {
+        const res = await fetch("{{ url_for('sales_save') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                items: cart, customer_id: custId, customer_name: custName,
+                customer_phone: custPhone, payment_method: payMethod
+            })
+        });
+        const data = await res.json();
+        if (!data.ok) {
+            alert(data.error || 'Imeshindikana kuhifadhi mauzo.');
+            btn.disabled = false;
+            return;
+        }
+
+        document.getElementById('rcptNo').innerText = data.receipt_no;
+        document.getElementById('rcptDate').innerText = data.date;
+        document.getElementById('rcptCustName').innerText = custName;
+        document.getElementById('rcptCustPhone').innerText = custPhone || '-';
+        document.getElementById('rcptPayMethod').innerText = payMethod;
+
+        try {
+            const savedLogo = localStorage.getItem('mkolani_business_logo');
+            const logoImg = document.getElementById('receiptLogo');
+            if (savedLogo) { logoImg.src = savedLogo; logoImg.classList.remove('d-none'); }
+        } catch (e) {}
+
+        document.getElementById('rcptTableItems').innerHTML = cart.map(item => `
+            <tr><td class="text-start">${esc(item.name)}</td><td class="text-center">${item.qty}</td>
+            <td class="text-end">${(item.price * item.qty).toLocaleString()}</td></tr>`).join('');
+        document.getElementById('rcptGrandTotal').innerText = 'TZS ' + data.total.toLocaleString();
+
+        window.print();
+
+        // Pakia upya ili stoko na historia zisasishwe
+        cart = [];
+        window.location.reload();
+    } catch (e) {
+        alert('Tatizo la mtandao. Jaribu tena.');
+        btn.disabled = false;
+    }
+}
+
+updateCartUI();
+</script>
+{% endblock %}
